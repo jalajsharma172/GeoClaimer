@@ -1,0 +1,157 @@
+/* Import Leaflet CSS */
+@import 'leaflet/dist/leaflet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(60, 4.8%, 95.9%);
+  --secondary-foreground: hsl(24, 9.8%, 10%);
+  --accent: hsl(60, 4.8%, 95.9%);
+  --accent-foreground: hsl(24, 9.8%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+
+  /* Game-specific colors */
+  --game-primary: hsl(213, 94%, 68%);
+  --game-secondary: hsl(142, 76%, 36%);
+  --game-accent: hsl(38, 92%, 50%);
+  --claimed-area: hsl(217, 91%, 60%);
+  --new-claim: hsl(142, 69%, 58%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+/* Leaflet map styles */
+.leaflet-container {
+  height: 100vh;
+  width: 100vw;
+}
+
+.leaflet-popup-content-wrapper {
+  @apply rounded-lg shadow-lg;
+}
+
+.leaflet-popup-content {
+  @apply text-sm;
+}
+
+/* Custom map control styles */
+.leaflet-control-layers {
+  @apply bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-white/20;
+}
+
+.leaflet-control-zoom {
+  @apply bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-white/20;
+}
+
+.leaflet-control-zoom a {
+  @apply text-gray-700 hover:bg-gray-100/50;
+}
+
+/* Game-specific utility classes */
+.game-primary {
+  background-color: var(--game-primary);
+}
+
+.game-secondary {
+  background-color: var(--game-secondary);
+}
+
+.game-accent {
+  background-color: var(--game-accent);
+}
+
+.claimed-area {
+  background-color: var(--claimed-area);
+}
+
+.new-claim {
+  background-color: var(--new-claim);
+}
+
+/* Animation for GPS pulse */
+@keyframes gps-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+.gps-pulse {
+  animation: gps-pulse 2s ease-in-out infinite;
+}
+
+/* Custom scrollbar for leaderboard */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--game-primary) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--game-primary);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--game-secondary);
+}

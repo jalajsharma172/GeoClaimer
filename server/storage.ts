@@ -1,0 +1,221 @@
+import { type User, type InsertUser, type Claim, type InsertClaim } from "@shared/schema";
+import { randomUUID } from "crypto";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { users, claims } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
+
+export interface IStorage {
+  // User operations
+  getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  
+  // Claim operations
+  getClaim(id: string): Promise<Claim | undefined>;
+  getClaimsByUser(userId: string): Promise<Claim[]>;
+  getAllClaims(): Promise<Claim[]>;
+  createClaim(claim: InsertClaim): Promise<Claim>;
+  
+  // Leaderboard operations
+  getLeaderboard(scope: 'district' | 'city' | 'country', location: string): Promise<User[]>;
+  getUserRank(userId: string, scope: 'district' | 'city' | 'country', location: string): Promise<number>;
+}
+
+export class MemStorage implements IStorage {
+  private users: Map<string, User>;
+  private claims: Map<string, Claim>;
+
+  constructor() {
+    this.users = new Map();
+    this.claims = new Map();
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
+    );
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = randomUUID();
+    const user: User = { 
+      ...insertUser,
+      email: insertUser.email || null,
+      isAnonymous: insertUser.isAnonymous || null,
+      district: insertUser.district || null,
+      city: insertUser.city || null,
+      country: insertUser.country || null,
+      id, 
+      createdAt: new Date(),
+      totalArea: 0,
+      totalClaims: 0,
+    };
+    this.users.set(id, user);
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    
+    const updatedUser = { ...user, ...updates };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async getClaim(id: string): Promise<Claim | undefined> {
+    return this.claims.get(id);
+  }
+
+  async getClaimsByUser(userId: string): Promise<Claim[]> {
+    return Array.from(this.claims.values()).filter(
+      (claim) => claim.userId === userId,
+    );
+  }
+
+  async getAllClaims(): Promise<Claim[]> {
+    return Array.from(this.claims.values());
+  }
+
+  async createClaim(insertClaim: InsertClaim): Promise<Claim> {
+    const id = randomUUID();
+    const claim: Claim = { 
+      ...insertClaim,
+      district: insertClaim.district || null,
+      city: insertClaim.city || null,
+      country: insertClaim.country || null,
+      radius: insertClaim.radius || 100,
+      id, 
+      createdAt: new Date(),
+    };
+    this.claims.set(id, claim);
+
+    // Update user's total area and claims count
+    const user = this.users.get(insertClaim.userId);
+    if (user) {
+      user.totalArea = (user.totalArea || 0) + insertClaim.area;
+      user.totalClaims = (user.totalClaims || 0) + 1;
+      this.users.set(user.id, user);
+    }
+
+    return claim;
+  }
+
+  async getLeaderboard(scope: 'district' | 'city' | 'country', location: string): Promise<User[]> {
+    const users = Array.from(this.users.values());
+    const filteredUsers = users.filter(user => {
+      switch (scope) {
+        case 'district': return user.district === location;
+        case 'city': return user.city === location;
+        case 'country': return user.country === location;
+        default: return true;
+      }
+    });
+    
+    return filteredUsers
+      .sort((a, b) => (b.totalArea || 0) - (a.totalArea || 0))
+      .slice(0, 50); // Top 50 players
+  }
+
+  async getUserRank(userId: string, scope: 'district' | 'city' | 'country', location: string): Promise<number> {
+    const leaderboard = await this.getLeaderboard(scope, location);
+    const userIndex = leaderboard.findIndex(user => user.id === userId);
+    return userIndex >= 0 ? userIndex + 1 : -1;
+  }
+}
+
+// Database storage implementation
+export class DbStorage implements IStorage {
+  private db;
+
+  constructor() {
+    const sql = neon(process.env.DATABASE_URL!);
+    this.db = drizzle(sql);
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result[0];
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await this.db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const result = await this.db.update(users).set(updates).where(eq(users.id, id)).returning();
+    return result[0];
+  }
+
+  async getClaim(id: string): Promise<Claim | undefined> {
+    const result = await this.db.select().from(claims).where(eq(claims.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getClaimsByUser(userId: string): Promise<Claim[]> {
+    return await this.db.select().from(claims).where(eq(claims.userId, userId)).orderBy(desc(claims.createdAt));
+  }
+
+  async getAllClaims(): Promise<Claim[]> {
+    return await this.db.select().from(claims).orderBy(desc(claims.createdAt));
+  }
+
+  async createClaim(insertClaim: InsertClaim): Promise<Claim> {
+    const result = await this.db.insert(claims).values(insertClaim).returning();
+    const claim = result[0];
+
+    // Update user's total area and claims count
+    const user = await this.getUser(insertClaim.userId);
+    if (user) {
+      await this.updateUser(user.id, {
+        totalArea: (user.totalArea || 0) + insertClaim.area,
+        totalClaims: (user.totalClaims || 0) + 1,
+      });
+    }
+
+    return claim;
+  }
+
+  async getLeaderboard(scope: 'district' | 'city' | 'country', location: string): Promise<User[]> {
+    let whereCondition;
+    switch (scope) {
+      case 'district':
+        whereCondition = eq(users.district, location);
+        break;
+      case 'city':
+        whereCondition = eq(users.city, location);
+        break;
+      case 'country':
+        whereCondition = eq(users.country, location);
+        break;
+    }
+
+    return await this.db
+      .select()
+      .from(users)
+      .where(whereCondition)
+      .orderBy(desc(users.totalArea))
+      .limit(50);
+  }
+
+  async getUserRank(userId: string, scope: 'district' | 'city' | 'country', location: string): Promise<number> {
+    const leaderboard = await this.getLeaderboard(scope, location);
+    const userIndex = leaderboard.findIndex(user => user.id === userId);
+    return userIndex >= 0 ? userIndex + 1 : -1;
+  }
+}
+
+// Use database storage if DATABASE_URL is available, otherwise use memory storage
+export const storage = process.env.DATABASE_URL ? new DbStorage() : new MemStorage();
