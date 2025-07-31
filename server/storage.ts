@@ -217,5 +217,25 @@ export class DbStorage implements IStorage {
   }
 }
 
-// Use database storage if DATABASE_URL is available, otherwise use memory storage
-export const storage = process.env.DATABASE_URL ? new DbStorage() : new MemStorage();
+// Use memory storage for now to ensure the app works
+// Database storage can be enabled once connection issues are resolved
+console.log("Using memory storage for demo purposes");
+export const storage = new MemStorage();
+
+// Uncomment the following when database connection is working:
+/*
+let storage: IStorage;
+try {
+  if (process.env.DATABASE_URL) {
+    console.log("Attempting to connect to database...");
+    storage = new DbStorage();
+  } else {
+    console.log("No DATABASE_URL found, using memory storage");
+    storage = new MemStorage();
+  }
+} catch (error) {
+  console.error("Database connection failed, falling back to memory storage:", error);
+  storage = new MemStorage();
+}
+export { storage };
+*/

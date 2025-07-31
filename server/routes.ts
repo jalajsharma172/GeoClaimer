@@ -5,7 +5,9 @@ import { insertUserSchema, insertClaimSchema } from "@shared/schema";
 import { z } from "zod";
 
 const loginSchema = z.object({
-  email: z.string().email().optional(),
+  email: z.string().optional().refine((val) => !val || val === "" || z.string().email().safeParse(val).success, {
+    message: "Invalid email format"
+  }),
   username: z.string().min(1),
   isAnonymous: z.boolean().default(false),
 });
@@ -20,10 +22,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication endpoints
   app.post("/api/auth/login", async (req, res) => {
     try {
+      console.log("Login request body:", req.body);
       const { email, username, isAnonymous } = loginSchema.parse(req.body);
       
       let user;
-      if (email && !isAnonymous) {
+      if (email && email.trim() !== "" && !isAnonymous) {
         user = await storage.getUserByEmail(email);
         if (!user) {
           user = await storage.createUser({
@@ -42,7 +45,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ user });
     } catch (error) {
-      res.status(400).json({ message: "Invalid login data" });
+      console.error("Login error:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        res.status(500).json({ message: "Server error", error: errorMessage });
+      }
     }
   });
 
