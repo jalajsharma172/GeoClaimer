@@ -16,7 +16,7 @@ interface HomeProps {
 export default function Home({ user, onLogout }: HomeProps) {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const { position, accuracy, isTracking, error, locationHistory, isCircleComplete, circleCenter, clearHistory, refreshLocation } = useLocationTracker();
+  const { position, accuracy, isTracking, error, locationHistory, isCircleComplete, circleCenter, currentPath, totalPathLength, currentPathArea, clearHistory, refreshLocation, startNewPath, saveCurrentPath } = useLocationTracker({ user });
   const { toast } = useToast();
 
   // Debug location tracking
