@@ -1,8 +1,8 @@
-import { type User, type InsertUser, type Claim, type InsertClaim } from "@shared/schema";
+import { type User, type InsertUser, type Claim, type InsertClaim, type CompletedCircle, type InsertCompletedCircle } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { users, claims } from "@shared/schema";
+import { users, claims, completedCircles } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
@@ -18,6 +18,12 @@ export interface IStorage {
   getAllClaims(): Promise<Claim[]>;
   createClaim(claim: InsertClaim): Promise<Claim>;
   
+  // Completed Circle operations
+  getCompletedCircle(id: string): Promise<CompletedCircle | undefined>;
+  getCompletedCirclesByUser(userId: string): Promise<CompletedCircle[]>;
+  getAllCompletedCircles(): Promise<CompletedCircle[]>;
+  createCompletedCircle(completedCircle: InsertCompletedCircle): Promise<CompletedCircle>;
+  
   // Leaderboard operations
   getLeaderboard(scope: 'district' | 'city' | 'country', location: string): Promise<User[]>;
   getUserRank(userId: string, scope: 'district' | 'city' | 'country', location: string): Promise<number>;
@@ -26,10 +32,12 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private claims: Map<string, Claim>;
+  private completedCircles: Map<string, CompletedCircle>;
 
   constructor() {
     this.users = new Map();
     this.claims = new Map();
+    this.completedCircles = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -105,6 +113,40 @@ export class MemStorage implements IStorage {
     }
 
     return claim;
+  }
+
+  async getCompletedCircle(id: string): Promise<CompletedCircle | undefined> {
+    return this.completedCircles.get(id);
+  }
+
+  async getCompletedCirclesByUser(userId: string): Promise<CompletedCircle[]> {
+    return Array.from(this.completedCircles.values()).filter(
+      (circle) => circle.userId === userId,
+    );
+  }
+
+  async getAllCompletedCircles(): Promise<CompletedCircle[]> {
+    return Array.from(this.completedCircles.values());
+  }
+
+  async createCompletedCircle(insertCompletedCircle: InsertCompletedCircle): Promise<CompletedCircle> {
+    const id = randomUUID();
+    const completedCircle: CompletedCircle = {
+      ...insertCompletedCircle,
+      id,
+      createdAt: new Date(),
+    };
+    this.completedCircles.set(id, completedCircle);
+
+    // Update user's total area and completed circles count
+    const user = this.users.get(insertCompletedCircle.userId);
+    if (user) {
+      user.totalArea = (user.totalArea || 0) + insertCompletedCircle.area;
+      user.totalCompletedCircles = (user.totalCompletedCircles || 0) + 1;
+      this.users.set(user.id, user);
+    }
+
+    return completedCircle;
   }
 
   async getLeaderboard(scope: 'district' | 'city' | 'country', location: string): Promise<User[]> {
@@ -186,6 +228,35 @@ export class DbStorage implements IStorage {
     }
 
     return claim;
+  }
+
+  async getCompletedCircle(id: string): Promise<CompletedCircle | undefined> {
+    const result = await this.db.select().from(completedCircles).where(eq(completedCircles.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getCompletedCirclesByUser(userId: string): Promise<CompletedCircle[]> {
+    return await this.db.select().from(completedCircles).where(eq(completedCircles.userId, userId)).orderBy(desc(completedCircles.createdAt));
+  }
+
+  async getAllCompletedCircles(): Promise<CompletedCircle[]> {
+    return await this.db.select().from(completedCircles).orderBy(desc(completedCircles.createdAt));
+  }
+
+  async createCompletedCircle(insertCompletedCircle: InsertCompletedCircle): Promise<CompletedCircle> {
+    const result = await this.db.insert(completedCircles).values(insertCompletedCircle).returning();
+    const completedCircle = result[0];
+
+    // Update user's total area and completed circles count
+    const user = await this.getUser(insertCompletedCircle.userId);
+    if (user) {
+      await this.updateUser(user.id, {
+        totalArea: (user.totalArea || 0) + insertCompletedCircle.area,
+        totalCompletedCircles: (user.totalCompletedCircles || 0) + 1,
+      });
+    }
+
+    return completedCircle;
   }
 
   async getLeaderboard(scope: 'district' | 'city' | 'country', location: string): Promise<User[]> {

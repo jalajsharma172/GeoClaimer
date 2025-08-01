@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertClaimSchema } from "@shared/schema";
+import { insertUserSchema, insertClaimSchema, insertCompletedCircleSchema } from "@shared/schema";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -107,6 +107,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ claim });
     } catch (error) {
       res.status(400).json({ message: "Invalid claim data" });
+    }
+  });
+
+  // Completed Circles endpoints
+  app.get("/api/completed-circles", async (req, res) => {
+    try {
+      const completedCircles = await storage.getAllCompletedCircles();
+      res.json({ completedCircles });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get completed circles" });
+    }
+  });
+
+  app.get("/api/completed-circles/user/:userId", async (req, res) => {
+    try {
+      const completedCircles = await storage.getCompletedCirclesByUser(req.params.userId);
+      res.json({ completedCircles });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user completed circles" });
+    }
+  });
+
+  app.post("/api/completed-circles", async (req, res) => {
+    try {
+      const completedCircleData = insertCompletedCircleSchema.parse(req.body);
+      const completedCircle = await storage.createCompletedCircle(completedCircleData);
+      res.json({ completedCircle });
+    } catch (error) {
+      res.status(400).json({ message: "Invalid completed circle data" });
     }
   });
 

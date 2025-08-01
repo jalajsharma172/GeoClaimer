@@ -16,8 +16,22 @@ interface HomeProps {
 export default function Home({ user, onLogout }: HomeProps) {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const { position, accuracy, isTracking, error } = useLocationTracker();
+  const { position, accuracy, isTracking, error, locationHistory, isCircleComplete, circleCenter, clearHistory, refreshLocation } = useLocationTracker();
   const { toast } = useToast();
+
+  // Debug location tracking
+  useEffect(() => {
+    console.log('Location tracking status:', {
+      position: position ? {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy
+      } : null,
+      isTracking,
+      error,
+      locationHistoryLength: locationHistory.length
+    });
+  }, [position, isTracking, error, locationHistory.length]);
 
   useEffect(() => {
     if (error) {
@@ -28,6 +42,16 @@ export default function Home({ user, onLogout }: HomeProps) {
       });
     }
   }, [error, toast]);
+
+  useEffect(() => {
+    if (isCircleComplete && circleCenter) {
+      toast({
+        title: "Circle Completed! 🎉",
+        description: "You've successfully completed a 10m circle! Your achievement has been saved.",
+        variant: "default",
+      });
+    }
+  }, [isCircleComplete, circleCenter, toast]);
 
   const handleClaimArea = async () => {
     if (!position || !isTracking) {
@@ -53,6 +77,9 @@ export default function Home({ user, onLogout }: HomeProps) {
         user={user} 
         position={position} 
         isTracking={isTracking}
+        locationHistory={locationHistory}
+        isCircleComplete={isCircleComplete}
+        circleCenter={circleCenter}
         onClaimSuccess={(area) => {
           toast({
             title: "Area Claimed!",
@@ -66,6 +93,9 @@ export default function Home({ user, onLogout }: HomeProps) {
             description: message,
             variant: "destructive",
           });
+        }}
+        onCircleComplete={(center) => {
+          // This will be handled by the useEffect above
         }}
       />
 
@@ -98,84 +128,71 @@ export default function Home({ user, onLogout }: HomeProps) {
       <div className="absolute top-24 right-4 z-20">
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-3 border border-white/20 min-w-[200px]">
           <div className="flex items-center space-x-2 mb-2">
-            <div className={`w-3 h-3 ${isTracking ? 'bg-green-500' : 'bg-red-500'} rounded-full ${isTracking ? 'animate-pulse' : ''}`}></div>
-            <p className="text-sm font-medium text-gray-700">
-              {isTracking ? 'Live Tracking' : 'GPS Inactive'}
-            </p>
+            <div className={`w-3 h-3 rounded-full ${isTracking ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+            <span className="text-sm font-medium text-gray-700">
+              {isTracking ? 'GPS Active' : 'GPS Inactive'}
+            </span>
           </div>
-          <div className="space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Current Radius:</span>
-              <span className="font-medium">100m</span>
+          {accuracy && (
+            <p className="text-xs text-gray-600">Accuracy: ±{Math.round(accuracy)}m</p>
+          )}
+          {locationHistory.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs text-gray-600">Tracked Points: {locationHistory.length}</p>
+              {isCircleComplete && (
+                <p className="text-xs text-green-600 font-medium">✓ Circle Completed!</p>
+              )}
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">GPS Accuracy:</span>
-              <span className={`font-medium ${accuracy && accuracy <= 10 ? 'text-green-500' : 'text-yellow-500'}`}>
-                {accuracy ? `±${Math.round(accuracy)}m` : 'N/A'}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Total Claims:</span>
-              <span className="font-medium">{user.totalClaims || 0}</span>
-            </div>
-          </div>
+          )}
+          {locationHistory.length > 0 && (
+            <button
+              onClick={clearHistory}
+              className="mt-2 w-full text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors"
+            >
+              Clear History
+            </button>
+          )}
+          <button
+            onClick={refreshLocation}
+            className="mt-2 w-full text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+          >
+            Refresh GPS
+          </button>
         </div>
       </div>
 
-      {/* Area Stats Panel */}
-      <div className="absolute bottom-20 left-4 right-4 z-20">
-        <AreaStats 
-          user={user} 
-          isExpanded={showStats} 
-          onToggle={() => setShowStats(!showStats)} 
-        />
-      </div>
-
-      {/* Bottom Navigation */}
+      {/* Bottom Action Buttons */}
       <div className="absolute bottom-4 left-4 right-4 z-20">
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-4 border border-white/20">
-          <div className="flex items-center justify-between">
-            <Button
-              onClick={handleClaimArea}
-              disabled={!isTracking || !position}
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 mr-3 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="flex items-center justify-center space-x-2">
-                <MapPin className="w-5 h-5" />
-                <span>Claim Area</span>
-              </div>
-            </Button>
-
-            <Button
-              onClick={() => setShowLeaderboard(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-200"
-            >
-              <Users className="w-5 h-5" />
-            </Button>
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-gray-100/50">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 ${isTracking ? 'bg-green-500' : 'bg-red-500'} rounded-full ${isTracking ? 'animate-pulse' : ''}`}></div>
-                <span className="text-gray-600">
-                  {isTracking ? 'GPS Active' : 'GPS Inactive'}
-                </span>
-              </div>
-              <span className="text-gray-500">
-                {position ? 'Live position' : 'Waiting for GPS...'}
-              </span>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setShowStats(true)}
+            className="flex-1 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-4 border border-white/20 hover:bg-white/95 transition-all"
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+              <span className="font-medium text-gray-900">Statistics</span>
             </div>
-          </div>
+          </button>
+          
+          <button
+            onClick={() => setShowLeaderboard(true)}
+            className="flex-1 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-4 border border-white/20 hover:bg-white/95 transition-all"
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <Users className="w-5 h-5 text-green-600" />
+              <span className="font-medium text-gray-900">Leaderboard</span>
+            </div>
+          </button>
         </div>
       </div>
 
-      {/* Leaderboard Modal */}
+      {/* Modals */}
+      {showStats && (
+        <AreaStats user={user} onClose={() => setShowStats(false)} />
+      )}
+      
       {showLeaderboard && (
-        <Leaderboard 
-          user={user} 
-          onClose={() => setShowLeaderboard(false)} 
-        />
+        <Leaderboard onClose={() => setShowLeaderboard(false)} />
       )}
     </div>
   );

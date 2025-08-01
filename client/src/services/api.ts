@@ -79,3 +79,15 @@ export const getLeaderboard = (scope: 'district' | 'city' | 'country', location:
   api.getLeaderboard(scope, location);
 export const getUserRank = (userId: string, scope: 'district' | 'city' | 'country', location: string) => 
   api.getUserRank(userId, scope, location);
+
+export async function getCompletedCircles() {
+  return apiRequest('GET', '/api/completed-circles');
+}
+
+export async function getCompletedCirclesByUser(userId: string) {
+  return apiRequest('GET', `/api/completed-circles/user/${userId}`);
+}
+
+export async function createCompletedCircle(completedCircleData: any) {
+  return apiRequest('POST', '/api/completed-circles', completedCircleData);
+}

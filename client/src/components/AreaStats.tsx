@@ -1,134 +1,142 @@
 import { useQuery } from "@tanstack/react-query";
+import { getCompletedCirclesByUser } from "@/services/api";
 import type { User } from "@shared/schema";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { BarChart3, ChevronUp, ChevronDown } from "lucide-react";
+import { MapPin, Clock, Trophy, Target } from "lucide-react";
+import { useEffect } from "react";
 
 interface AreaStatsProps {
   user: User;
-  isExpanded: boolean;
-  onToggle: () => void;
+  onClose: () => void;
 }
 
-export default function AreaStats({ user, isExpanded, onToggle }: AreaStatsProps) {
-  // Fetch user's rank in different scopes
-  const { data: districtRank } = useQuery<{ rank: number }>({
-    queryKey: ['/api/leaderboard/district', user.district || 'unknown', 'rank', user.id],
-    enabled: !!user.district,
+export default function AreaStats({ user, onClose }: AreaStatsProps) {
+  const { data: completedCirclesData } = useQuery({
+    queryKey: ['/api/completed-circles/user', user.id],
   });
 
-  const { data: cityRank } = useQuery<{ rank: number }>({
-    queryKey: ['/api/leaderboard/city', user.city || 'unknown', 'rank', user.id],
-    enabled: !!user.city,
-  });
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
+  const completedCircles = completedCirclesData?.completedCircles || [];
+  const totalCompletedCircles = completedCircles.length;
+  const totalAreaClaimed = completedCircles.reduce((sum, circle) => sum + (circle.area || 0), 0);
+  const averageCompletionTime = completedCircles.length > 0 
+    ? completedCircles.reduce((sum, circle) => sum + (circle.completionTime || 0), 0) / completedCircles.length
+    : 0;
 
   return (
-    <Card className="bg-white/95 backdrop-blur-sm border border-white/20 overflow-hidden">
-      <CardContent className="p-0">
-        <Button
-          onClick={onToggle}
-          variant="ghost"
-          className="w-full p-4 flex items-center justify-between hover:bg-gray-50/50 rounded-none"
-        >
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 text-white" />
-            </div>
-            <div className="text-left">
-              <p className="font-semibold text-gray-900">Area Statistics</p>
-              <p className="text-sm text-gray-600">View your progress</p>
-            </div>
-          </div>
-          {isExpanded ? (
-            <ChevronDown className="w-5 h-5 text-gray-400" />
-          ) : (
-            <ChevronUp className="w-5 h-5 text-gray-400" />
-          )}
-        </Button>
-
-        {isExpanded && (
-          <div className="border-t border-gray-100/50 p-4 space-y-4">
-            {/* Progress Bars */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">District Rank</span>
-                  <span className="font-medium text-blue-600">
-                    {districtRank && districtRank.rank > 0 ? `#${districtRank.rank}` : 'N/A'}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-500" 
-                    style={{ 
-                      width: districtRank && districtRank.rank > 0 ? `${Math.max(100 - districtRank.rank * 2, 10)}%` : '10%' 
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">City Rank</span>
-                  <span className="font-medium text-green-500">
-                    {cityRank && cityRank.rank > 0 ? `#${cityRank.rank}` : 'N/A'}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-green-500 h-2 rounded-full transition-all duration-500" 
-                    style={{ 
-                      width: cityRank && cityRank.rank > 0 ? `${Math.max(100 - cityRank.rank * 2, 10)}%` : '10%' 
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Achievement Badges */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">Achievements</p>
-              <div className="flex flex-wrap gap-2">
-                {user.totalClaims && user.totalClaims > 0 && (
-                  <div className="px-3 py-1 bg-yellow-500/10 rounded-full border border-yellow-500/20">
-                    <span className="text-xs font-medium text-yellow-600">First Claim!</span>
-                  </div>
-                )}
-                {user.totalArea && user.totalArea > 1000 && (
-                  <div className="px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
-                    <span className="text-xs font-medium text-green-600">Area Explorer</span>
-                  </div>
-                )}
-                {user.totalClaims && user.totalClaims >= 10 && (
-                  <div className="px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">
-                    <span className="text-xs font-medium text-blue-600">Territory Master</span>
-                  </div>
-                )}
-                {(!user.totalClaims || user.totalClaims === 0) && (
-                  <div className="px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
-                    <span className="text-xs font-medium text-gray-500">Start exploring!</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Detailed Stats */}
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-blue-600">
-                  {Math.round(user.totalArea || 0).toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500">Square Meters</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-500">
-                  {user.totalClaims || 0}
-                </p>
-                <p className="text-xs text-gray-500">Areas Claimed</p>
-              </div>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Your Statistics</h2>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('Close button clicked');
+                  onClose();
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100 cursor-pointer z-10 relative"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <button
+                onClick={onClose}
+                className="text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                Close
+              </button>
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          <div className="space-y-6">
+            {/* Total Area */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-4 text-white">
+              <div className="flex items-center space-x-3">
+                <MapPin className="w-8 h-8" />
+                <div>
+                  <p className="text-sm opacity-90">Total Area Claimed</p>
+                  <p className="text-2xl font-bold">{Math.round(totalAreaClaimed).toLocaleString()} m²</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Claims */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <div className="flex items-center space-x-3">
+                <Trophy className="w-6 h-6 text-yellow-600" />
+                <div>
+                  <p className="text-sm text-gray-600">Total Claims</p>
+                  <p className="text-xl font-bold text-gray-900">{user.totalClaims || 0}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Completed Circles */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <div className="flex items-center space-x-3">
+                <Target className="w-6 h-6 text-green-600" />
+                <div>
+                  <p className="text-sm text-gray-600">Completed Circles</p>
+                  <p className="text-xl font-bold text-gray-900">{totalCompletedCircles}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Average Completion Time */}
+            {averageCompletionTime > 0 && (
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center space-x-3">
+                  <Clock className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Avg. Completion Time</p>
+                    <p className="text-xl font-bold text-gray-900">{Math.round(averageCompletionTime)}s</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Recent Completed Circles */}
+            {completedCircles.length > 0 && (
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Recent Circles</h3>
+                <div className="space-y-2">
+                  {completedCircles.slice(0, 3).map((circle) => (
+                    <div key={circle.id} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">
+                        {new Date(circle.createdAt!).toLocaleDateString()}
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {Math.round(circle.area)} m²
+                      </span>
+                      {circle.completionTime && (
+                        <span className="text-blue-600">
+                          {Math.round(circle.completionTime)}s
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
