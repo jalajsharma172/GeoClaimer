@@ -105,7 +105,15 @@ The application uses two main entities:
 - Replit-specific development enhancements and error handling
 - Environment-based feature toggles for development vs production
 
-## Recent Changes (July 31, 2025)
+## Recent Changes (August 2, 2025)
+
+### Migration to Replit Environment (August 2, 2025)
+- ✓ Successfully migrated from Replit Agent to standard Replit environment
+- ✓ Resolved cross-env dependency and Express server startup issues
+- ✓ Migrated from MemStorage to PostgreSQL DatabaseStorage
+- ✓ Created map_view_preferences table for storing MapView interface props
+- ✓ Added comprehensive API endpoints for MapView state persistence
+- ✓ Implemented complete database schema with user preferences
 
 ### Completed Implementation
 - ✓ Built complete GPS-based territory claiming game
@@ -115,9 +123,10 @@ The application uses two main entities:
 - ✓ Built territory claiming system with 100m radius circles
 - ✓ Added overlap detection using Haversine formula
 - ✓ Implemented leaderboard system (district, city, country scopes)
-- ✓ Connected to Supabase database for persistent storage
+- ✓ Connected to PostgreSQL database for persistent storage
 - ✓ Added area statistics and achievement tracking
 - ✓ Fixed login validation issues and database schema
+- ✓ Migrated to DatabaseStorage with MapView preferences
 
 ### Current Status
 The Territory Walker game is fully functional with:
@@ -125,9 +134,16 @@ The Territory Walker game is fully functional with:
 - Territory claiming with overlap prevention
 - Multi-level leaderboards and rankings
 - Responsive UI with modern design
-- Database persistence for all game data
+- Full database persistence for all game data and user preferences
+- MapView state storage in database for seamless user experience
+
+### Database Schema
+- **users**: Core user information and statistics
+- **claims**: Territory claims with GPS coordinates
+- **user_paths**: User movement paths and tracking data
+- **completed_circles**: Completed territory circles
+- **map_view_preferences**: MapView interface state and preferences per user
 
 ### Known Issues
-- Login schema validation was initially failing (FIXED)
-- Leaflet CSS import ordering issue (FIXED)
-- TypeScript type compatibility issues (FIXED)
+- All previous issues have been resolved
+- Drizzle Kit version compatibility (working with manual schema deployment)
