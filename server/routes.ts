@@ -13,15 +13,15 @@ const loginSchema = z.object({
 });
 
 const claimSchema = insertClaimSchema.extend({
-  district: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
+  district: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  country: z.string().nullable().optional(),
 });
 
 const userPathSchema = insertUserPathSchema.extend({
-  district: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
+  district: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  country: z.string().nullable().optional(),
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
