@@ -39,13 +39,26 @@ export default function Login({ onLogin }: LoginProps) {
   const handleLogin = async (data: LoginForm) => {
     setIsLoading(true);
     try {
+      console.log("Login attempt:", { 
+        email: data.email || undefined, 
+        username: data.username, 
+        isAnonymous: data.isAnonymous 
+      });
+      
       const response = await apiRequest('POST', '/api/auth/login', {
         email: data.email || undefined,
         username: data.username,
         isAnonymous: data.isAnonymous,
       });
       
+      console.log("Login response status:", response.status);
       const result = await response.json();
+      console.log("Login result:", result);
+      
+      if (!result.user) {
+        throw new Error("No user data in response");
+      }
+      
       onLogin(result.user);
       
       toast({
@@ -53,9 +66,11 @@ export default function Login({ onLogin }: LoginProps) {
         description: "Start exploring and claiming your territory",
       });
     } catch (error) {
+      console.error("Login error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       toast({
         title: "Login Failed",
-        description: "Please try again",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -63,12 +78,12 @@ export default function Login({ onLogin }: LoginProps) {
     }
   };
 
-  const handleAnonymousLogin = () => {
+  const handleAnonymousLogin = async () => {
     const username = `Explorer${Math.floor(Math.random() * 10000)}`;
     form.setValue('username', username);
     form.setValue('isAnonymous', true);
     form.setValue('email', '');
-    handleLogin({ username, isAnonymous: true, email: '' });
+    await handleLogin({ username, isAnonymous: true, email: '' });
   };
 
   return (

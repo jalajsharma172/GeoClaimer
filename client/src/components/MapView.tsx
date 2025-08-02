@@ -379,7 +379,7 @@ export default function MapView({
     // Add completed circles
     completedCirclesData.completedCircles.forEach((circle: CompletedCircle) => {
       const isUserCircle = circle.userId === user.id;
-      const circleLayer = L.circle([circle.latitude, circle.longitude], {
+      const circleLayer = L.circle([circle.centerLatitude, circle.centerLongitude], {
         radius: circle.radius,
         color: isUserCircle ? '#10B981' : '#F59E0B',
         fillColor: isUserCircle ? '#10B981' : '#F59E0B',
