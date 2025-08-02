@@ -63,6 +63,19 @@ export const completedCircles = pgTable("completed_circles", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const mapViewPreferences = pgTable("map_view_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull().unique(),
+  locationHistory: text("location_history").notNull().default("[]"), // JSON array of {lat, lng, timestamp}
+  isCircleComplete: integer("is_circle_complete").default(0), // 0 for false, 1 for true
+  circleCenter: text("circle_center"), // JSON object {lat, lng} or null
+  mapZoom: real("map_zoom").default(15),
+  mapCenter: text("map_center"), // JSON object {lat, lng} for last map center
+  isTracking: integer("is_tracking").default(0), // 0 for false, 1 for true
+  lastPosition: text("last_position"), // JSON object of last GeolocationPosition
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -77,11 +90,20 @@ export const insertUserPathSchema = createInsertSchema(userPaths).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  district: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  country: z.string().nullable().optional(),
 });
 
 export const insertCompletedCircleSchema = createInsertSchema(completedCircles).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertMapViewPreferencesSchema = createInsertSchema(mapViewPreferences).omit({
+  id: true,
+  updatedAt: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -92,3 +114,5 @@ export type InsertUserPath = z.infer<typeof insertUserPathSchema>;
 export type UserPath = typeof userPaths.$inferSelect;
 export type InsertCompletedCircle = z.infer<typeof insertCompletedCircleSchema>;
 export type CompletedCircle = typeof completedCircles.$inferSelect;
+export type InsertMapViewPreferences = z.infer<typeof insertMapViewPreferencesSchema>;
+export type MapViewPreferences = typeof mapViewPreferences.$inferSelect;

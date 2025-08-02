@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertClaimSchema, insertCompletedCircleSchema, insertUserPathSchema } from "@shared/schema";
+import { insertUserSchema, insertClaimSchema, insertCompletedCircleSchema, insertUserPathSchema, insertMapViewPreferencesSchema } from "@shared/schema";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -13,16 +13,26 @@ const loginSchema = z.object({
 });
 
 const claimSchema = insertClaimSchema.extend({
-  district: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
-});
+  district: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  country: z.string().optional().nullable(),
+}).transform((data) => ({
+  ...data,
+  district: data.district || undefined,
+  city: data.city || undefined,
+  country: data.country || undefined,
+}));
 
 const userPathSchema = insertUserPathSchema.extend({
-  district: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
-});
+  district: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  country: z.string().optional().nullable(),
+}).transform((data) => ({
+  ...data,
+  district: data.district || undefined,
+  city: data.city || undefined,
+  country: data.country || undefined,
+}));
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication endpoints
@@ -71,6 +81,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ user });
     } catch (error) {
       res.status(500).json({ message: "Failed to get user" });
+    }
+  });
+
+  app.put("/api/users/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      const user = await storage.updateUser(req.params.id, updates);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({ user });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user" });
     }
   });
 
@@ -230,6 +253,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ rank });
     } catch (error) {
       res.status(500).json({ message: "Failed to get user rank" });
+    }
+  });
+
+  // MapView preferences endpoints
+  app.get("/api/map-preferences/:userId", async (req, res) => {
+    try {
+      const preferences = await storage.getMapViewPreferences(req.params.userId);
+      res.json({ preferences });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get map preferences" });
+    }
+  });
+
+  app.post("/api/map-preferences", async (req, res) => {
+    try {
+      const preferencesData = insertMapViewPreferencesSchema.parse(req.body);
+      const preferences = await storage.createMapViewPreferences(preferencesData);
+      res.json({ preferences });
+    } catch (error) {
+      console.error("Map preferences creation error:", error);
+      res.status(400).json({ message: "Invalid map preferences data" });
+    }
+  });
+
+  app.put("/api/map-preferences/:userId", async (req, res) => {
+    try {
+      const updates = req.body;
+      const preferences = await storage.updateMapViewPreferences(req.params.userId, updates);
+      if (!preferences) {
+        return res.status(404).json({ message: "Map preferences not found" });
+      }
+      res.json({ preferences });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update map preferences" });
     }
   });
 
