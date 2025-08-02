@@ -32,6 +32,7 @@ export function useLocationTracker({ user }: UseLocationTrackerProps) {
   const [currentPath, setCurrentPath] = useState<UserPath | null>(null);
   const [totalPathLength, setTotalPathLength] = useState(0);
   const [currentPathArea, setCurrentPathArea] = useState(0);
+  const [lastSaveTime, setLastSaveTime] = useState<number | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const queryClient = useQueryClient();
 
@@ -164,6 +165,7 @@ export function useLocationTracker({ user }: UseLocationTrackerProps) {
   const saveCurrentPath = async () => {
     if (!currentPath || locationHistory.length === 0) return;
 
+    console.log('Saving path with', locationHistory.length, 'points');
     const pathLength = calculatePathLength(locationHistory);
     const pathArea = calculatePathArea(pathLength, PATH_WIDTH);
 
@@ -175,6 +177,7 @@ export function useLocationTracker({ user }: UseLocationTrackerProps) {
     };
 
     updatePathMutation.mutate({ pathId: currentPath.id, updates });
+    setLastSaveTime(Date.now());
   };
 
   // Check for path intersections and create circles
@@ -286,9 +289,15 @@ export function useLocationTracker({ user }: UseLocationTrackerProps) {
         // Check for path intersections
         checkPathIntersections();
         
-        // Save to database periodically
-        if (updated.length % 10 === 0 && currentPath) {
+        // Save to database more frequently (every 5 points instead of 10)
+        if (updated.length % 5 === 0 && currentPath) {
           saveCurrentPath();
+        }
+        
+        // Also save every 30 seconds regardless of point count
+        if (Date.now() - (lastSaveTime || 0) > 30000 && currentPath) {
+          saveCurrentPath();
+          setLastSaveTime(Date.now());
         }
         
         return updated;
@@ -399,22 +408,65 @@ export function useLocationTracker({ user }: UseLocationTrackerProps) {
     }
   }, [isTracking, currentPath, position]);
 
-  // Load active path on component mount
+  // Load active path on component mount and restore location history
   useEffect(() => {
-    if (activePathData && 'activePath' in activePathData && activePathData.activePath) {
-      setCurrentPath(activePathData.activePath);
-      if (activePathData.activePath.pathPoints) {
-        try {
-          const savedPoints = JSON.parse(activePathData.activePath.pathPoints);
-          setLocationHistory(savedPoints);
-          setTotalPathLength(activePathData.activePath.pathLength || 0);
-          setCurrentPathArea(activePathData.activePath.area || 0);
-        } catch (error) {
-          console.error('Failed to parse saved path points:', error);
+    if (activePathData && typeof activePathData === 'object' && 'activePath' in activePathData) {
+      const activePath = (activePathData as any).activePath;
+      if (activePath) {
+        console.log('Loading saved path:', activePath);
+        setCurrentPath(activePath);
+        if (activePath.pathPoints) {
+          try {
+            const savedPoints = JSON.parse(activePath.pathPoints);
+            console.log('Restoring path points:', savedPoints.length, 'points');
+            setLocationHistory(savedPoints);
+            setTotalPathLength(activePath.pathLength || 0);
+            setCurrentPathArea(activePath.area || 0);
+          } catch (error) {
+            console.error('Failed to parse saved path points:', error);
+          }
         }
       }
     }
   }, [activePathData]);
+
+  // Auto-save before page unload to prevent data loss
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (currentPath && locationHistory.length > 0) {
+        console.log('Page unloading, saving current path...');
+        // Use fetch with keepalive for better reliability than sendBeacon
+        fetch(`/api/user-paths/${currentPath.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pathPoints: JSON.stringify(locationHistory),
+            pathLength: calculatePathLength(locationHistory),
+            area: calculatePathArea(calculatePathLength(locationHistory), PATH_WIDTH),
+            isActive: 1,
+          }),
+          keepalive: true
+        }).catch(error => {
+          console.error('Failed to save path on page unload:', error);
+        });
+      }
+    };
+
+    // Also save when visibility changes (tab switching)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && currentPath && locationHistory.length > 0) {
+        saveCurrentPath();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [currentPath, locationHistory]);
 
   return {
     position,

@@ -115,6 +115,15 @@ The application uses two main entities:
 - ✓ Added comprehensive API endpoints for MapView state persistence
 - ✓ Implemented complete database schema with user preferences
 
+### Path Persistence Improvements (August 2, 2025)
+- ✓ Fixed map refresh path loss issue by implementing robust path persistence
+- ✓ Added automatic path saving every 5 GPS points (down from 10)
+- ✓ Implemented time-based path saving every 30 seconds
+- ✓ Added page unload protection with keepalive fetch requests
+- ✓ Added tab visibility change detection for better path preservation
+- ✓ Improved path restoration on page reload from database
+- ✓ Enhanced total area calculation updates based on travel distance
+
 ### Completed Implementation
 - ✓ Built complete GPS-based territory claiming game
 - ✓ Implemented user authentication (email or anonymous)
