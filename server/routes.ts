@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertClaimSchema, insertCompletedCircleSchema } from "@shared/schema";
+import { insertUserSchema, insertClaimSchema, insertCompletedCircleSchema, insertUserPathSchema } from "@shared/schema";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -13,6 +13,12 @@ const loginSchema = z.object({
 });
 
 const claimSchema = insertClaimSchema.extend({
+  district: z.string().optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
+});
+
+const userPathSchema = insertUserPathSchema.extend({
   district: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
@@ -136,6 +142,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ completedCircle });
     } catch (error) {
       res.status(400).json({ message: "Invalid completed circle data" });
+    }
+  });
+
+  // User Path endpoints
+  app.get("/api/user-paths", async (req, res) => {
+    try {
+      const userPaths = await storage.getAllUserPaths();
+      res.json({ userPaths });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user paths" });
+    }
+  });
+
+  app.get("/api/user-paths/user/:userId", async (req, res) => {
+    try {
+      const userPaths = await storage.getUserPaths(req.params.userId);
+      res.json({ userPaths });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user paths" });
+    }
+  });
+
+  app.get("/api/user-paths/active/:userId", async (req, res) => {
+    try {
+      const activePath = await storage.getActiveUserPath(req.params.userId);
+      res.json({ activePath });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get active user path" });
+    }
+  });
+
+  app.post("/api/user-paths", async (req, res) => {
+    try {
+      const userPathData = userPathSchema.parse(req.body);
+      const userPath = await storage.createUserPath(userPathData);
+      res.json({ userPath });
+    } catch (error) {
+      console.error("Path creation error:", error);
+      res.status(400).json({ message: "Invalid user path data" });
+    }
+  });
+
+  app.put("/api/user-paths/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      const userPath = await storage.updateUserPath(req.params.id, updates);
+      if (!userPath) {
+        return res.status(404).json({ message: "User path not found" });
+      }
+      res.json({ userPath });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user path" });
     }
   });
 

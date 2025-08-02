@@ -1,8 +1,8 @@
-import { type User, type InsertUser, type Claim, type InsertClaim, type CompletedCircle, type InsertCompletedCircle } from "@shared/schema";
+import { type User, type InsertUser, type Claim, type InsertClaim, type CompletedCircle, type InsertCompletedCircle, type UserPath, type InsertUserPath } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { users, claims, completedCircles } from "@shared/schema";
+import { users, claims, completedCircles, userPaths } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
@@ -18,6 +18,14 @@ export interface IStorage {
   getAllClaims(): Promise<Claim[]>;
   createClaim(claim: InsertClaim): Promise<Claim>;
   
+  // User Path operations
+  getUserPath(id: string): Promise<UserPath | undefined>;
+  getUserPaths(userId: string): Promise<UserPath[]>;
+  getActiveUserPath(userId: string): Promise<UserPath | undefined>;
+  getAllUserPaths(): Promise<UserPath[]>;
+  createUserPath(userPath: InsertUserPath): Promise<UserPath>;
+  updateUserPath(id: string, updates: Partial<UserPath>): Promise<UserPath | undefined>;
+  
   // Completed Circle operations
   getCompletedCircle(id: string): Promise<CompletedCircle | undefined>;
   getCompletedCirclesByUser(userId: string): Promise<CompletedCircle[]>;
@@ -32,11 +40,13 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private claims: Map<string, Claim>;
+  private userPaths: Map<string, UserPath>;
   private completedCircles: Map<string, CompletedCircle>;
 
   constructor() {
     this.users = new Map();
     this.claims = new Map();
+    this.userPaths = new Map();
     this.completedCircles = new Map();
   }
 
@@ -63,6 +73,8 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       totalArea: 0,
       totalClaims: 0,
+      totalCompletedCircles: 0,
+      totalPathLength: 0,
     };
     this.users.set(id, user);
     return user;
@@ -75,6 +87,78 @@ export class MemStorage implements IStorage {
     const updatedUser = { ...user, ...updates };
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async getUserPath(id: string): Promise<UserPath | undefined> {
+    return this.userPaths.get(id);
+  }
+
+  async getUserPaths(userId: string): Promise<UserPath[]> {
+    return Array.from(this.userPaths.values()).filter(
+      (path) => path.userId === userId,
+    );
+  }
+
+  async getActiveUserPath(userId: string): Promise<UserPath | undefined> {
+    return Array.from(this.userPaths.values()).find(
+      (path) => path.userId === userId && path.isActive === 1,
+    );
+  }
+
+  async getAllUserPaths(): Promise<UserPath[]> {
+    return Array.from(this.userPaths.values());
+  }
+
+  async createUserPath(insertUserPath: InsertUserPath): Promise<UserPath> {
+    const id = randomUUID();
+    const userPath: UserPath = { 
+      ...insertUserPath,
+      district: insertUserPath.district || null,
+      city: insertUserPath.city || null,
+      country: insertUserPath.country || null,
+      area: insertUserPath.area || null,
+      pathLength: insertUserPath.pathLength || null,
+      isActive: insertUserPath.isActive || null,
+      id, 
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.userPaths.set(id, userPath);
+
+    // Update user's total path length and area
+    const user = this.users.get(insertUserPath.userId);
+    if (user) {
+      user.totalPathLength = (user.totalPathLength || 0) + (insertUserPath.pathLength || 0);
+      user.totalArea = (user.totalArea || 0) + (insertUserPath.area || 0);
+      this.users.set(user.id, user);
+    }
+
+    return userPath;
+  }
+
+  async updateUserPath(id: string, updates: Partial<UserPath>): Promise<UserPath | undefined> {
+    const userPath = this.userPaths.get(id);
+    if (!userPath) return undefined;
+    
+    const updatedUserPath = { ...userPath, ...updates, updatedAt: new Date() };
+    this.userPaths.set(id, updatedUserPath);
+
+    // Update user's total area if area changed
+    if (updates.area !== undefined || updates.pathLength !== undefined) {
+      const user = this.users.get(userPath.userId);
+      if (user) {
+        const oldArea = userPath.area || 0;
+        const newArea = updatedUserPath.area || 0;
+        const oldLength = userPath.pathLength || 0;
+        const newLength = updatedUserPath.pathLength || 0;
+        
+        user.totalArea = (user.totalArea || 0) - oldArea + newArea;
+        user.totalPathLength = (user.totalPathLength || 0) - oldLength + newLength;
+        this.users.set(user.id, user);
+      }
+    }
+
+    return updatedUserPath;
   }
 
   async getClaim(id: string): Promise<Claim | undefined> {
@@ -133,6 +217,10 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const completedCircle: CompletedCircle = {
       ...insertCompletedCircle,
+      district: insertCompletedCircle.district || null,
+      city: insertCompletedCircle.city || null,
+      country: insertCompletedCircle.country || null,
+      completionTime: insertCompletedCircle.completionTime || null,
       id,
       createdAt: new Date(),
     };
@@ -285,6 +373,34 @@ export class DbStorage implements IStorage {
     const leaderboard = await this.getLeaderboard(scope, location);
     const userIndex = leaderboard.findIndex(user => user.id === userId);
     return userIndex >= 0 ? userIndex + 1 : -1;
+  }
+
+  async getUserPath(id: string): Promise<UserPath | undefined> {
+    const result = await this.db.select().from(userPaths).where(eq(userPaths.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getUserPaths(userId: string): Promise<UserPath[]> {
+    return await this.db.select().from(userPaths).where(eq(userPaths.userId, userId)).orderBy(desc(userPaths.createdAt));
+  }
+
+  async getActiveUserPath(userId: string): Promise<UserPath | undefined> {
+    const result = await this.db.select().from(userPaths).where(eq(userPaths.userId, userId)).limit(1);
+    return result.find(path => path.isActive === 1);
+  }
+
+  async getAllUserPaths(): Promise<UserPath[]> {
+    return await this.db.select().from(userPaths).orderBy(desc(userPaths.createdAt));
+  }
+
+  async createUserPath(insertUserPath: InsertUserPath): Promise<UserPath> {
+    const result = await this.db.insert(userPaths).values(insertUserPath).returning();
+    return result[0];
+  }
+
+  async updateUserPath(id: string, updates: Partial<UserPath>): Promise<UserPath | undefined> {
+    const result = await this.db.update(userPaths).set(updates).where(eq(userPaths.id, id)).returning();
+    return result[0];
   }
 }
 
