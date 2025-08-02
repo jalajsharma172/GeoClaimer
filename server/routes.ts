@@ -13,6 +13,9 @@ const loginSchema = z.object({
 });
 
 const claimSchema = insertClaimSchema.extend({
+
+
+
   district: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
@@ -33,6 +36,7 @@ const userPathSchema = insertUserPathSchema.extend({
   city: data.city || undefined,
   country: data.country || undefined,
 }));
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication endpoints
