@@ -90,6 +90,10 @@ export const insertUserPathSchema = createInsertSchema(userPaths).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  district: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  country: z.string().nullable().optional(),
 });
 
 export const insertCompletedCircleSchema = createInsertSchema(completedCircles).omit({

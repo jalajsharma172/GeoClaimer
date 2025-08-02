@@ -125,6 +125,41 @@ export function useLocationTracker({ user }: UseLocationTrackerProps) {
     createPathMutation.mutate(newPathData);
   };
 
+  // Update user's total area for travel distance
+  const updateUserTotalAreaForTravel = async (currentArea: number) => {
+    if (!currentPath || currentArea <= 0) return;
+    
+    // Only update if area has increased significantly (avoid frequent small updates)
+    const lastSavedArea = currentPath.area || 0;
+    const areaDifference = currentArea - lastSavedArea;
+    
+    if (areaDifference >= 50) { // Update every 50 square meters of new area
+      try {
+        // Update user statistics via API call
+        await fetch(`/api/users/${user.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            totalArea: (user.totalArea || 0) + areaDifference,
+          })
+        });
+        
+        // Update the current path's saved area
+        if (currentPath) {
+          updatePathMutation.mutate({
+            pathId: currentPath.id,
+            updates: { area: currentArea }
+          });
+        }
+        
+        // Invalidate user queries to refresh the UI
+        queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      } catch (error) {
+        console.error('Failed to update user total area:', error);
+      }
+    }
+  };
+
   // Save current path to database
   const saveCurrentPath = async () => {
     if (!currentPath || locationHistory.length === 0) return;
@@ -242,6 +277,11 @@ export function useLocationTracker({ user }: UseLocationTrackerProps) {
         const pathArea = calculatePathArea(pathLength, PATH_WIDTH);
         setTotalPathLength(pathLength);
         setCurrentPathArea(pathArea);
+        
+        // Update user's total area in real-time based on travel distance
+        if (pathArea > currentPathArea) {
+          updateUserTotalAreaForTravel(pathArea);
+        }
         
         // Check for path intersections
         checkPathIntersections();
@@ -361,7 +401,7 @@ export function useLocationTracker({ user }: UseLocationTrackerProps) {
 
   // Load active path on component mount
   useEffect(() => {
-    if (activePathData?.activePath) {
+    if (activePathData && 'activePath' in activePathData && activePathData.activePath) {
       setCurrentPath(activePathData.activePath);
       if (activePathData.activePath.pathPoints) {
         try {

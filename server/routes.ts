@@ -13,16 +13,26 @@ const loginSchema = z.object({
 });
 
 const claimSchema = insertClaimSchema.extend({
-  district: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
-});
+  district: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  country: z.string().optional().nullable(),
+}).transform((data) => ({
+  ...data,
+  district: data.district || undefined,
+  city: data.city || undefined,
+  country: data.country || undefined,
+}));
 
 const userPathSchema = insertUserPathSchema.extend({
-  district: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
-});
+  district: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  country: z.string().optional().nullable(),
+}).transform((data) => ({
+  ...data,
+  district: data.district || undefined,
+  city: data.city || undefined,
+  country: data.country || undefined,
+}));
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication endpoints
@@ -71,6 +81,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ user });
     } catch (error) {
       res.status(500).json({ message: "Failed to get user" });
+    }
+  });
+
+  app.put("/api/users/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      const user = await storage.updateUser(req.params.id, updates);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({ user });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user" });
     }
   });
 
