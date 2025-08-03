@@ -4,6 +4,7 @@ import type { User, Claim, CompletedCircle, UserPath } from "@shared/schema";
 import { checkOverlap, calculateCircleArea } from "@/utils/ClaimManager";
 import { apiRequest } from "@/lib/queryClient";
 import { getCompletedCircles, createCompletedCircle } from "@/services/api";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 // Import Leaflet dynamically to avoid SSR issues
 let L: any = null;
@@ -62,13 +63,41 @@ export default function MapView({
   const [isMapReady, setIsMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const queryClient = useQueryClient();
+  const { isOnline, isOffline, hasRecovered, resetRecoveryFlag } = useNetworkStatus();
 
   // Preload Leaflet as soon as component mounts
   useEffect(() => {
     loadLeaflet().catch(console.error);
   }, []);
+
+  // Auto-retry when network connection is restored
+  useEffect(() => {
+    if (hasRecovered && mapError) {
+      console.log('Network recovered, attempting to reload map...');
+      setIsRetrying(true);
+      setMapError(null);
+      setLoadingProgress(0);
+      setIsMapReady(false);
+      
+      // Clear the recovery flag
+      resetRecoveryFlag();
+      
+      // Retry initialization after a short delay
+      setTimeout(() => {
+        setIsRetrying(false);
+      }, 1000);
+    }
+  }, [hasRecovered, mapError, resetRecoveryFlag]);
+
+  // Show offline message when network is down
+  useEffect(() => {
+    if (isOffline && !mapError) {
+      setMapError('No internet connection. Please check your network and try again.');
+    }
+  }, [isOffline, mapError]);
 
   // Fetch all claims for visualization
   const { data: claimsData } = useQuery<{ claims: Claim[] }>({
@@ -166,8 +195,12 @@ export default function MapView({
         }).addTo(map);
 
         // Add fallback tile provider if CartoDB fails
-        tileLayer.on('tileerror', () => {
-          console.log('CartoDB tiles failed, trying OpenStreetMap...');
+        tileLayer.on('tileerror', (e: any) => {
+          console.log('CartoDB tiles failed, trying OpenStreetMap...', e);
+          if (isOffline) {
+            setMapError('No internet connection. Tiles cannot load without internet.');
+            return;
+          }
           // Try OpenStreetMap as fallback
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
@@ -190,7 +223,11 @@ export default function MapView({
         }, 2000);
       } catch (error) {
         console.error('Failed to initialize map:', error);
-        setMapError('Failed to load map. Please check your internet connection and refresh the page.');
+        if (isOffline) {
+          setMapError('No internet connection. Please check your network and try again.');
+        } else {
+          setMapError('Failed to load map. Please check your internet connection and try again.');
+        }
       }
     };
 
@@ -578,21 +615,61 @@ export default function MapView({
   }
 
   if (mapError) {
+    const isConnectionError = mapError.toLowerCase().includes('connection') || mapError.toLowerCase().includes('internet');
+    
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-red-100 to-pink-100">
         <div className="text-center text-gray-600">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-600 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
+          <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+            isConnectionError 
+              ? 'bg-orange-600' 
+              : 'bg-red-600'
+          }`}>
+            {isConnectionError ? (
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+              </svg>
+            ) : (
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            )}
           </div>
-          <p className="text-lg font-medium">Map Error</p>
-          <p className="text-sm text-gray-500">{mapError}</p>
+          <p className="text-lg font-medium">
+            {isConnectionError ? 'Connection Issue' : 'Map Error'}
+          </p>
+          <p className="text-sm text-gray-500 mb-2">{mapError}</p>
+          
+          {isConnectionError && (
+            <div className="mb-4">
+              <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                isOnline 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                <div className={`w-2 h-2 rounded-full mr-2 ${
+                  isOnline ? 'bg-green-400' : 'bg-red-400'
+                }`}></div>
+                {isOnline ? 'Connected' : 'Offline'}
+              </div>
+              {isOnline && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Connection restored! The map should reload automatically.
+                </p>
+              )}
+            </div>
+          )}
+          
           <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={() => {
+              setMapError(null);
+              setLoadingProgress(0);
+              setIsMapReady(false);
+            }} 
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            disabled={isRetrying}
           >
-            Refresh Page
+            {isRetrying ? 'Retrying...' : 'Try Again'}
           </button>
         </div>
       </div>
