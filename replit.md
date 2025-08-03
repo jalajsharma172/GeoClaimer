@@ -53,6 +53,13 @@ Territory Walker is a geospatial tracking application that enables users to log,
 - **Visual distinction** between active paths (blue) and completed paths (gray)
 - **Path information popups** showing length, area, points count, and creation date
 
+### New Area Calculation Formula
+- **Implemented claimed area formula**: `Area = (distance * 2 * r) + (π * r²)`
+- **Updated calculateClaimedArea function** in geometry utilities
+- **Modified location tracker** to use new formula for real-time area calculation
+- **Enhanced total area tracking** with corridor and circular end cap calculations
+- **Formula parameters**: r = 10 meters (path radius), distance = total path length
+
 ### Database Schema
 - **userPaths table** stores path data with JSON point arrays
 - **Foreign key relationships** link paths to users

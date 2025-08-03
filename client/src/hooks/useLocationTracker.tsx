@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { findPathIntersections, calculatePathLength, calculatePathArea, type PathPoint } from "@shared/utils/geometry";
+import { findPathIntersections, calculatePathLength, calculateClaimedArea, calculatePathArea, calculateDistance, type PathPoint } from "@shared/utils/geometry";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { User, UserPath } from "@shared/schema";
@@ -167,12 +167,13 @@ export function useLocationTracker({ user }: UseLocationTrackerProps) {
 
     console.log('Saving path with', locationHistory.length, 'points');
     const pathLength = calculatePathLength(locationHistory);
-    const pathArea = calculatePathArea(pathLength, PATH_WIDTH);
+    // Use the new claimed area formula: Area = (distance * 2 * r) + (π * r²)
+    const claimedArea = calculateClaimedArea(pathLength, CIRCLE_RADIUS);
 
     const updates = {
       pathPoints: JSON.stringify(locationHistory),
       pathLength,
-      area: pathArea,
+      area: claimedArea,
       isActive: 1,
     };
 
@@ -269,21 +270,22 @@ export function useLocationTracker({ user }: UseLocationTrackerProps) {
       // Only add point if it's far enough from the last point
       setLocationHistory(prev => {
         const lastPoint = prev[prev.length - 1];
-        if (lastPoint && calculateDistance(lastPoint.lat, lastPoint.lng, newPoint.lat, newPoint.lng) < MIN_DISTANCE_FOR_NEW_POINT) {
+        if (lastPoint && calculateDistance(lastPoint, newPoint) < MIN_DISTANCE_FOR_NEW_POINT) {
           return prev; // Skip this point
         }
 
         const updated = [...prev, newPoint];
         
-        // Update path length and area
+        // Update path length and area using the new claimed area formula
         const pathLength = calculatePathLength(updated);
-        const pathArea = calculatePathArea(pathLength, PATH_WIDTH);
+        // Use the formula: Area = (distance * 2 * r) + (π * r²) where r = 10m
+        const claimedArea = calculateClaimedArea(pathLength, CIRCLE_RADIUS);
         setTotalPathLength(pathLength);
-        setCurrentPathArea(pathArea);
+        setCurrentPathArea(claimedArea);
         
         // Update user's total area in real-time based on travel distance
-        if (pathArea > currentPathArea) {
-          updateUserTotalAreaForTravel(pathArea);
+        if (claimedArea > currentPathArea) {
+          updateUserTotalAreaForTravel(claimedArea);
         }
         
         // Check for path intersections

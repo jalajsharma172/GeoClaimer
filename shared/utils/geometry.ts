@@ -41,10 +41,24 @@ export function calculatePathLength(points: LatLng[]): number {
 }
 
 /**
- * Calculate area of path (assuming 10m width)
+ * Calculate claimed area using the formula: Area = (distance * 2 * r) + (π * r²)
+ * This includes both the path area (rectangle) and circular end caps
+ */
+export function calculateClaimedArea(pathLength: number, radius: number = 10): number {
+  // Area = (distance * 2 * r) + (π * r²)
+  // Where distance is path length, r is radius (10m)
+  const rectangularArea = pathLength * 2 * radius; // Path corridor area
+  const circularArea = Math.PI * radius * radius; // End caps area
+  return rectangularArea + circularArea;
+}
+
+/**
+ * Legacy function for backward compatibility - now uses the new formula
  */
 export function calculatePathArea(pathLength: number, width: number = 10): number {
-  return pathLength * width; // Area = length × width
+  // Convert width to radius for the new formula
+  const radius = width / 2;
+  return calculateClaimedArea(pathLength, radius);
 }
 
 /**
