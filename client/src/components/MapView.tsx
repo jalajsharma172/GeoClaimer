@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import type { User, Claim, CompletedCircle } from "@shared/schema";
+import type { User, Claim, CompletedCircle, UserPath } from "@shared/schema";
 import { checkOverlap, calculateCircleArea } from "@/utils/ClaimManager";
 import { apiRequest } from "@/lib/queryClient";
 import { getCompletedCircles, createCompletedCircle } from "@/services/api";
@@ -85,6 +85,12 @@ export default function MapView({
   // Fetch completed circles
   const { data: completedCirclesData } = useQuery<{ completedCircles: CompletedCircle[] }>({
     queryKey: ['/api/completed-circles'],
+    enabled: isMapReady,
+  });
+
+  // Fetch user's all paths (including previous ones)
+  const { data: userPathsData } = useQuery<{ userPaths: UserPath[] }>({
+    queryKey: ['/api/user-paths/user', user.id],
     enabled: isMapReady,
   });
 
@@ -379,7 +385,7 @@ export default function MapView({
     // Add completed circles
     completedCirclesData.completedCircles.forEach((circle: CompletedCircle) => {
       const isUserCircle = circle.userId === user.id;
-      const circleLayer = L.circle([circle.latitude, circle.longitude], {
+      const circleLayer = L.circle([circle.centerLatitude, circle.centerLongitude], {
         radius: circle.radius,
         color: isUserCircle ? '#10B981' : '#F59E0B',
         fillColor: isUserCircle ? '#10B981' : '#F59E0B',
@@ -401,6 +407,64 @@ export default function MapView({
       completedCircleLayersRef.current.push(circleLayer);
     });
   }, [completedCirclesData, user.id]);
+
+  // Render all user paths (including previous ones)
+  const allUserPathsRef = useRef<any[]>([]);
+  useEffect(() => {
+    if (!mapInstanceRef.current || !L || !userPathsData?.userPaths) return;
+
+    const map = mapInstanceRef.current;
+
+    // Clear previous user path layers
+    allUserPathsRef.current.forEach(layer => {
+      if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
+      }
+    });
+    allUserPathsRef.current = [];
+
+    // Render all user paths
+    userPathsData.userPaths.forEach((userPath: UserPath) => {
+      try {
+        const pathPoints = JSON.parse(userPath.pathPoints) as Array<{lat: number, lng: number, timestamp: number}>;
+        
+        if (pathPoints && pathPoints.length > 1) {
+          const latLngs = pathPoints.map(point => [point.lat, point.lng]);
+          
+          // Different styles for active vs completed paths
+          const isActive = userPath.isActive === 1;
+          const pathStyle = {
+            color: isActive ? '#3B82F6' : '#6B7280', // Blue for active, gray for completed
+            weight: isActive ? 4 : 3,
+            opacity: isActive ? 0.8 : 0.6,
+            className: `user-path-layer ${isActive ? 'active-path' : 'completed-path'}`,
+          };
+
+          const polyline = L.polyline(latLngs, pathStyle).addTo(map);
+
+          // Add popup with path information
+          const pathLength = userPath.pathLength || 0;
+          const pathArea = userPath.area || 0;
+          const createdDate = new Date(userPath.createdAt!).toLocaleString();
+          
+          polyline.bindPopup(`
+            <div>
+              <strong>${isActive ? 'Active Path' : 'Completed Path'}</strong><br>
+              Length: ${Math.round(pathLength)} m<br>
+              Area: ${Math.round(pathArea)} m²<br>
+              Points: ${pathPoints.length}<br>
+              Created: ${createdDate}
+              ${userPath.district ? `<br>District: ${userPath.district}` : ''}
+            </div>
+          `);
+
+          allUserPathsRef.current.push(polyline);
+        }
+      } catch (error) {
+        console.error('Error parsing path points:', error);
+      }
+    });
+  }, [userPathsData, user.id]);
 
   // Handle circle completion
   useEffect(() => {

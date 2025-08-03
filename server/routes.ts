@@ -187,6 +187,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/user-paths/username/:username", async (req, res) => {
+    try {
+      const userPaths = await storage.getUserPathsByUsername(req.params.username);
+      res.json({ userPaths });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user paths by username" });
+    }
+  });
+
   app.get("/api/user-paths/active/:userId", async (req, res) => {
     try {
       const activePath = await storage.getActiveUserPath(req.params.userId);

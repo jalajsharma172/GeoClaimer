@@ -84,6 +84,14 @@ export async function getCompletedCircles() {
   return apiRequest('GET', '/api/completed-circles');
 }
 
+export async function getUserPathsByUsername(username: string) {
+  return apiRequest('GET', `/api/user-paths/username/${encodeURIComponent(username)}`);
+}
+
+export async function getUserPaths(userId: string) {
+  return apiRequest('GET', `/api/user-paths/user/${userId}`);
+}
+
 export async function getCompletedCirclesByUser(userId: string) {
   return apiRequest('GET', `/api/completed-circles/user/${userId}`);
 }

@@ -19,6 +19,7 @@ export interface IStorage {
   // User Path operations
   getUserPath(id: string): Promise<UserPath | undefined>;
   getUserPaths(userId: string): Promise<UserPath[]>;
+  getUserPathsByUsername(username: string): Promise<UserPath[]>;
   getActiveUserPath(userId: string): Promise<UserPath | undefined>;
   getAllUserPaths(): Promise<UserPath[]>;
   createUserPath(userPath: InsertUserPath): Promise<UserPath>;
@@ -107,6 +108,10 @@ export class DatabaseStorage implements IStorage {
 
   async getUserPaths(userId: string): Promise<UserPath[]> {
     return await db.select().from(userPaths).where(eq(userPaths.userId, userId)).orderBy(desc(userPaths.createdAt));
+  }
+
+  async getUserPathsByUsername(username: string): Promise<UserPath[]> {
+    return await db.select().from(userPaths).where(eq(userPaths.username, username)).orderBy(desc(userPaths.createdAt));
   }
 
   async getActiveUserPath(userId: string): Promise<UserPath | undefined> {
