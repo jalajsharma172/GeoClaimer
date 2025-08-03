@@ -1,0 +1,46 @@
+I just created .env file "DATABASE_URL=postgresql://postgres.cdoslbhngfiaeugcdaam:Jalajkanak@2020@aws-0-ap-south-1.pooler.supabase.com:6543/postgres 
+
+VITE_DATABASE_URL=postgresql://postgres.cdoslbhngfiaeugcdaam:Jalajkanak@2020@aws-0-ap-south-1.pooler.supabase.com:6543/postgres 
+
+
+PORT=2020"
+then, after npm install, npm run dev , while logining of the page i got this error "
+> rest-express@1.0.0 dev
+> cross-env NODE_ENV=development tsx server/index.ts
+
+DATABASE_URL is set :->  postgresql://postgres.cdoslbhngfiaeugcdaam:Jalajkanak@2020@aws-0-ap-south-1.pooler.supabase.com:6543/postgres
+8:43:34 PM [express] serving on port 2020
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Login request body: {
+  email: 'jalajsharma172@gmail.com',
+  username: 'professor',
+  isAnonymous: false
+}
+Login error: error: column "total_completed_circles" does not exist
+    at file:///C:/Users/Amit%20Sharma/Desktop/GeoClaimer/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async NeonPreparedQuery.execute (C:\Users\Amit Sharma\Desktop\GeoClaimer\node_modules\src\neon-serverless\session.ts:102:18)
+    at async DatabaseStorage.getUserByEmail (C:\Users\Amit Sharma\Desktop\GeoClaimer\server\storage.ts:54:20)
+    at async <anonymous> (C:\Users\Amit Sharma\Desktop\GeoClaimer\server\routes.ts:46:16) {
+  length: 123,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '81',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+8:45:23 PM [express] POST /api/auth/login 500 in 829ms :: {"message":"Server error","error":"column …
+"
