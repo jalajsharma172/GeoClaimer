@@ -1,0 +1,51 @@
+6:28:15 PM [express] POST /api/user-paths 400 in 364ms :: {"message":"Invalid user path data"}
+Path creation error: error: relation "user_paths" does not exist
+    at C:\Users\Amit Sharma\Downloads\GeoClaimer (4)\GeoClaimer\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async <anonymous> (C:\Users\Amit Sharma\Downloads\GeoClaimer (4)\GeoClaimer\node_modules\src\node-postgres\session.ts:104:19)
+    at async DatabaseStorage.createUserPath (C:\Users\Amit Sharma\Downloads\GeoClaimer (4)\GeoClaimer\server\storage.ts:127:24)
+    at async <anonymous> (C:\Users\Amit Sharma\Downloads\GeoClaimer (4)\GeoClaimer\server\routes.ts:211:24) {
+  length: 109,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '13',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+6:28:22 PM [express] POST /api/user-paths 400 in 608ms :: {"message":"Invalid user path data"}
+Path creation error: error: relation "user_paths" does not exist
+    at C:\Users\Amit Sharma\Downloads\GeoClaimer (4)\GeoClaimer\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async <anonymous> (C:\Users\Amit Sharma\Downloads\GeoClaimer (4)\GeoClaimer\node_modules\src\node-postgres\session.ts:104:19)
+    at async DatabaseStorage.createUserPath (C:\Users\Amit Sharma\Downloads\GeoClaimer (4)\GeoClaimer\server\storage.ts:127:24)
+    at async <anonymous> (C:\Users\Amit Sharma\Downloads\GeoClaimer (4)\GeoClaimer\server\routes.ts:211:24) {
+  length: 109,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '13',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+6:28:24 PM [express] POST /api/user-paths 400 in 212ms :: {"message":"Invalid user path data"}
