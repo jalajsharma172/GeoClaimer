@@ -1,15 +1,24 @@
+// Top-level responsibilities
+
+// Load Leaflet safely (no SSR breakage).
+// Initialize and manage a single Leaflet map instance.
+// Show live user marker + accuracy circle and follow the user while tracking.
+// Draw location history (polyline), other users’ claims, and completed circles.
+// Handle create-claim and save-completed-circle API calls (React Query).
+// Handle offline/online recovery and friendly loading/error UI.
+
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import type { User, Claim, CompletedCircle, UserPath } from "@shared/schema";
-import { checkOverlap, calculateCircleArea } from "@/utils/ClaimManager";
-import { apiRequest } from "@/lib/queryClient";
+import type { User, Claim, CompletedCircle, UserPath } from "@shared/schema";//Types (User, Claim, etc.) for type safety.
+import { checkOverlap, calculateCircleArea } from "@/utils/ClaimManager";//Utility functions for geographic calculations
+import { apiRequest } from "@/lib/queryClient";//API service functions to get or create data.
 import { getCompletedCircles, createCompletedCircle } from "@/services/api";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";//Network status hook to handle offline/online behavior.
 
 // Import Leaflet dynamically to avoid SSR issues
-let L: any = null;
-let isLeafletLoaded = false;
-let leafletPromise: Promise<any> | null = null;
+let L: any = null;//L will store the Leaflet instance after loading.
+let isLeafletLoaded = false;// tracks if it's already loaded to avoid duplicate imports.
+let leafletPromise: Promise<any> | null = null;//  ensures loading happens only once even if multiple components try to load it.
 
 const loadLeaflet = async () => {
   if (typeof window !== 'undefined' && !isLeafletLoaded) {
@@ -21,6 +30,7 @@ const loadLeaflet = async () => {
         isLeafletLoaded = true;
         return L;
       }).catch((error) => {
+         isLeafletLoaded = false;
         console.error('Failed to load Leaflet:', error);
         throw error;
       });
@@ -31,12 +41,13 @@ const loadLeaflet = async () => {
 };
 
 interface MapViewProps {
-  user: User;
-  position: GeolocationPosition | null;
-  isTracking: boolean;
-  locationHistory: Array<{lat: number, lng: number, timestamp: number}>;
-  isCircleComplete: boolean;
+  user: User;//Current user
+  position: GeolocationPosition | null;//GPS position info
+  isTracking: boolean;                                   //Tracking state
+  locationHistory: Array<{lat: number, lng: number, timestamp: number}>;//Location history
+  isCircleComplete: boolean;                              //Circle completion state                   
   circleCenter: {lat: number, lng: number} | null;
+  //Success/error callbacks for claims
   onClaimSuccess: (area: number) => void;
   onClaimError: (message: string) => void;
   onCircleComplete: (center: {lat: number, lng: number}) => void;
@@ -53,6 +64,7 @@ export default function MapView({
   onClaimError,
   onCircleComplete
 }: MapViewProps) {
+  //Refs store map layers, markers, and polylines without causing re-renders.
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const currentCircleRef = useRef<any>(null);
@@ -60,30 +72,78 @@ export default function MapView({
   const claimedLayersRef = useRef<any[]>([]);
   const locationPathRef = useRef<any>(null);
   const completedCircleLayersRef = useRef<any[]>([]);
+  //State tracks readiness, errors, progress, and retry status.
   const [isMapReady, setIsMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
 
   const queryClient = useQueryClient();
-  const { isOnline, isOffline, hasRecovered, resetRecoveryFlag } = useNetworkStatus();
-
+  
   // Preload Leaflet as soon as component mounts
   useEffect(() => {
     loadLeaflet().catch(console.error);
   }, []);
-
+  
   // Auto-retry when network connection is restored
+  /*
+  ┌───────────────────────┐
+          │   Initial State        │
+          │ isOnline = navigator.onLine?  
+          │ isOffline = !isOnline  
+          │ wasOffline = false     
+          │ hasRecovered = false   
+          └───────────┬───────────┘
+                      │
+                      ▼
+         (Browser fires "offline" event)
+         │
+                      ▼
+          ┌───────────────────────┐
+          │ isOnline = false       │
+          │ isOffline = true       │
+          │ wasOffline = true      │
+          │ hasRecovered = false   │
+          └───────────┬───────────┘
+                      │  
+
+                      ▼
+         (Browser fires "online" event)
+                      │
+                      ▼
+          ┌──────────────────────────────┐
+          │ isOnline = true               │
+          │ isOffline = false             │
+          │ wasOffline = true             │
+          │ hasRecovered = true   <──────setMapError─┐ (Recovery trigger)
+          └───────────┬──────────────────┘
+                      │
+           (resetRecoveryFlag() called) it  should Retry the Map or Page
+                      │
+                      ▼
+          ┌───────────────────────┐
+          │ isOnline = true       │
+          │ isOffline = false     │
+          │ wasOffline = true     │
+          │ hasRecovered = false  │
+          └───────────────────────┘
+          
+          */
+ const { isOnline, isOffline, hasRecovered, resetRecoveryFlag } = useNetworkStatus();
   useEffect(() => {
     if (hasRecovered && mapError) {
       console.log('Network recovered, attempting to reload map...');
-      setIsRetrying(true);
-      setMapError(null);
-      setLoadingProgress(0);
-      setIsMapReady(false);
+      setIsRetrying(true);// Indicates that the app is attempting a retry 
+      setMapError(null);// Clears the previous map error.
+      setLoadingProgress(0);// Resets the map loading progress.
+      setIsMapReady(false);//Marks the map as not ready while retrying.
       
-      // Clear the recovery flag
-      resetRecoveryFlag();
+      
+      if(loadingProgress==100){
+        // Clear the recovery flag 
+        resetRecoveryFlag();
+      }
+      
       
       // Retry initialization after a short delay
       setTimeout(() => {
@@ -99,59 +159,6 @@ export default function MapView({
     }
   }, [isOffline, mapError]);
 
-  // Fetch all claims for visualization
-  const { data: claimsData } = useQuery<{ claims: Claim[] }>({
-    queryKey: ['/api/claims'],
-    enabled: isMapReady,
-  });
-
-  // Fetch user's claims
-  const { data: userClaimsData } = useQuery<{ claims: Claim[] }>({
-    queryKey: ['/api/claims/user', user.id],
-    enabled: isMapReady,
-  });
-
-  // Fetch completed circles
-  const { data: completedCirclesData } = useQuery<{ completedCircles: CompletedCircle[] }>({
-    queryKey: ['/api/completed-circles'],
-    enabled: isMapReady,
-  });
-
-  // Fetch user's all paths (including previous ones)
-  const { data: userPathsData } = useQuery<{ userPaths: UserPath[] }>({
-    queryKey: ['/api/user-paths/user', user.id],
-    enabled: isMapReady,
-  });
-
-  // Create claim mutation
-  const createClaimMutation = useMutation({
-    mutationFn: async (claimData: any) => {
-      const response = await apiRequest('POST', '/api/claims', claimData);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      onClaimSuccess(data.claim.area);
-      queryClient.invalidateQueries({ queryKey: ['/api/claims'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/claims/user', user.id] });
-    },
-    onError: (error: any) => {
-      onClaimError(error.message || 'Failed to claim area');
-    },
-  });
-
-  // Create completed circle mutation
-  const createCompletedCircleMutation = useMutation({
-    mutationFn: async (completedCircleData: any) => {
-      const response = await createCompletedCircle(completedCircleData);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/completed-circles'] });
-    },
-    onError: (error: any) => {
-      console.error('Failed to save completed circle:', error);
-    },
-  });
 
   // Initialize map
   useEffect(() => {
@@ -233,11 +240,15 @@ export default function MapView({
 
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
+
+
       if (!isMapReady && !mapError) {
         console.log('Map loading timeout reached');
         setMapError('Map is taking too long to load. Please check your internet connection and refresh the page.');
       }
-    }, 30000); // 30 second timeout (increased from 10 seconds)
+
+
+    }, 100); // 30 second timeout (increased from 10 seconds)
 
     initializeMap();
 
@@ -248,18 +259,22 @@ export default function MapView({
         mapInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [hasRecovered]);
+
+
+
 
   // Update user position and current circle
   useEffect(() => {
-    console.log('Position update:', { position, isTracking, mapReady: !!mapInstanceRef.current });
+    console.log('Position update:', { position, isTracking, mapReady: !!mapInstanceRef.current });//isTracking GPS Active hai ki nhi
     
-    if (!mapInstanceRef.current || !L || !position || !isTracking) {
-      if (currentCircleRef.current) {
-        mapInstanceRef.current.removeLayer(currentCircleRef.current);
-        currentCircleRef.current = null;
+    if (!mapInstanceRef.current || !L || !position || !isTracking || isOffline) {//If map not ready or tracking off 
+      if (mapInstanceRef.current && currentCircleRef.current) {
+          mapInstanceRef.current.removeLayer(currentCircleRef.current);
+          currentCircleRef.current = null;
       }
-      if (currentPositionMarkerRef.current) { // <-- Remove marker if exists
+   
+      if (mapInstanceRef.current && currentPositionMarkerRef.current) { // <-- Remove marker if exists
         mapInstanceRef.current.removeLayer(currentPositionMarkerRef.current);
         currentPositionMarkerRef.current = null;
       }
@@ -283,16 +298,16 @@ export default function MapView({
       map.removeLayer(currentPositionMarkerRef.current);
     }
 
-    // Add current position circle (10m radius)
+    // Draw the green 10 m circle for current position
     const currentCircle = L.circle([latitude, longitude], {
       radius: 10,
       color: '#22C55E',
       fillColor: '#22C55E',
-      fillOpacity: 0.3,
-      weight: 2,
+      fillOpacity: .9,
+      weight: 5,
     }).addTo(map);
 
-    // Add a more visible marker for exact position
+    // Draw the red custom marker dot
     const positionMarker = L.marker([latitude, longitude], {
       icon: L.divIcon({
         className: 'custom-marker',
@@ -306,12 +321,12 @@ export default function MapView({
     }).addTo(map);
 
     // Add accuracy circle (if accuracy is available)
-    if (position.coords.accuracy) {
+    if (position.coords.accuracy>100) {
       const accuracyCircle = L.circle([latitude, longitude], {
         radius: position.coords.accuracy,
         color: '#EF4444',
         fillColor: '#EF4444',
-        fillOpacity: 0.1,
+        fillOpacity: 0.01,
         weight: 1,
         dashArray: '5, 5'
       }).addTo(map);
@@ -333,8 +348,71 @@ export default function MapView({
     currentPositionMarkerRef.current = positionMarker; // <-- Track marker
 
     // Expose claim function globally for popup button
-    (window as any).attemptClaim = handleClaimAttempt;
-  }, [position, isTracking]);
+    // (window as any).attemptClaim = handleClaimAttempt;
+  }, [position, isTracking,isOffline]);
+
+// completedCircleData
+  // Create completed circle mutation
+  const createCompletedCircleMutation = useMutation({
+    mutationFn: async (completedCircleData: any) => {
+      const response = await createCompletedCircle(completedCircleData);// Saving Complete Circle to the Server
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/completed-circles'] });
+    },
+    onError: (error: any) => {
+      console.error('Failed to save completed circle:', error);
+    },
+  });
+
+  
+
+  // Fetch all claims for visualization-------------------->World wide Claimed Items Dikahana
+  const { data: claimsData } = useQuery<{ claims: Claim[] }>({
+    queryKey: ['/api/claims'],
+    enabled: isMapReady,
+  });
+
+  // Fetch user's claims------------------------------------->Mere Personal wide Claimed Items Dikahana
+  const { data: userClaimsData } = useQuery<{ claims: Claim[] }>({
+    queryKey: ['/api/claims/user', user.id],
+    enabled: isMapReady,
+  });
+
+  // Fetch completed circles------------------------------------> No REMOVE IT
+  const { data: completedCirclesData } = useQuery<{ completedCircles: CompletedCircle[] }>({
+    queryKey: ['/api/completed-circles'],
+    enabled: isMapReady,
+  });
+
+  // Fetch user's all paths (including previous ones)
+  const { data: userPathsData } = useQuery<{ userPaths: UserPath[] }>({
+    queryKey: ['/api/user-paths/user', user.id],
+    enabled: isMapReady,
+  });
+
+
+
+
+
+
+  // Create claim mutation----------------------------------dDONT KNOW USE
+  const createClaimMutation = useMutation({
+    mutationFn: async (claimData: any) => {
+      const response = await apiRequest('POST', '/api/claims', claimData);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      onClaimSuccess(data.claim.area);
+      queryClient.invalidateQueries({ queryKey: ['/api/claims'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/claims/user', user.id] });
+    },
+    onError: (error: any) => {
+      onClaimError(error.message || 'Failed to claim area');
+    },
+  });
+
 
   // Render location history path
   useEffect(() => {
@@ -445,6 +523,10 @@ export default function MapView({
     });
   }, [completedCirclesData, user.id]);
 
+
+
+
+
   // Render all user paths (including previous ones)
   const allUserPathsRef = useRef<any[]>([]);
   useEffect(() => {
@@ -504,79 +586,79 @@ export default function MapView({
   }, [userPathsData, user.id]);
 
   // Handle circle completion
-  useEffect(() => {
-    if (isCircleComplete && circleCenter && !createCompletedCircleMutation.isPending) {
-      const { latitude, longitude } = position!.coords;
-      const radius = 10;
-      const area = calculateCircleArea(radius);
+  // useEffect(() => {
+  //   if (isCircleComplete && circleCenter && !createCompletedCircleMutation.isPending) {
+  //     const { latitude, longitude } = position!.coords;
+  //     const radius = 10;
+  //     const area = calculateCircleArea(radius);
       
-      // Calculate completion time (time from first to last point)
-      const completionTime = locationHistory.length > 1 
-        ? (locationHistory[locationHistory.length - 1].timestamp - locationHistory[0].timestamp) / 1000
-        : 0;
+  //     // Calculate completion time (time from first to last point)
+  //     const completionTime = locationHistory.length > 1 
+  //       ? (locationHistory[locationHistory.length - 1].timestamp - locationHistory[0].timestamp) / 1000
+  //       : 0;
 
-      // Get location details
-      const district = `District_${Math.floor(latitude * 100) % 100}`;
-      const city = `City_${Math.floor(longitude * 100) % 100}`;
-      const country = 'Unknown';
+  //     // Get location details
+  //     const district = `District_${Math.floor(latitude * 100) % 100}`;
+  //     const city = `City_${Math.floor(longitude * 100) % 100}`;
+  //     const country = 'Unknown';
 
-      createCompletedCircleMutation.mutate({
-        userId: user.id,
-        username: user.username,
-        latitude: circleCenter.lat,
-        longitude: circleCenter.lng,
-        radius,
-        area,
-        pathPoints: JSON.stringify(locationHistory),
-        completionTime,
-        district,
-        city,
-        country,
-      });
-    }
-  }, [isCircleComplete, circleCenter, locationHistory, user, createCompletedCircleMutation]);
+  //     createCompletedCircleMutation.mutate({
+  //       userId: user.id,
+  //       username: user.username,
+  //       latitude: circleCenter.lat,
+  //       longitude: circleCenter.lng,
+  //       radius,
+  //       area,
+  //       pathPoints: JSON.stringify(locationHistory),
+  //       completionTime,
+  //       district,
+  //       city,
+  //       country,
+  //     });
+  //   }
+  // }, [isCircleComplete, circleCenter, locationHistory, user, createCompletedCircleMutation]);
 
-  const handleClaimAttempt = async () => {
-    if (!position || !isTracking) {
-      onClaimError('GPS tracking required to claim areas');
-      return;
-    }
+  // const handleClaimAttempt = async () => {
+  //   if (!position || !isTracking) {
+  //     onClaimError('GPS tracking required to claim areas');
+  //     return;
+  //   }
 
-    const { latitude, longitude } = position.coords;
-    const radius = 10;
-    const area = calculateCircleArea(radius);
+  //   const { latitude, longitude } = position.coords;
+  //   const radius = 10;
+  //   const area = calculateCircleArea(radius);
 
-    // Check for overlaps with existing claims
-    if (claimsData?.claims) {
-      const hasOverlap = claimsData.claims.some((claim: Claim) => 
-        checkOverlap(
-          { lat: latitude, lng: longitude, radius },
-          { lat: claim.latitude, lng: claim.longitude, radius: claim.radius }
-        )
-      );
+  //   // Check for overlaps with existing claims
+  //   if (claimsData?.claims) {
+  //     const hasOverlap = claimsData.claims.some((claim: Claim) => 
+  //       checkOverlap(
+  //         { lat: latitude, lng: longitude, radius },
+  //         { lat: claim.latitude, lng: claim.longitude, radius: claim.radius }
+  //       )
+  //     );
 
-      if (hasOverlap) {
-        onClaimError('This area overlaps with an existing claim');
-        return;
-      }
-    }
+  //     if (hasOverlap) {
+  //       onClaimError('This area overlaps with an existing claim');
+  //       return;
+  //     }
+  //   }
 
-    // Attempt to get location details (simplified - in a real app you'd use reverse geocoding)
-    const district = `District_${Math.floor(latitude * 100) % 100}`;
-    const city = `City_${Math.floor(longitude * 100) % 100}`;
-    const country = 'Unknown';
+  //   // Attempt to get location details (simplified - in a real app you'd use reverse geocoding)
+  //   const district = `District_${Math.floor(latitude * 100) % 100}`;
+  //   const city = `City_${Math.floor(longitude * 100) % 100}`;
+  //   const country = 'Unknown';
 
-    createClaimMutation.mutate({
-      userId: user.id,
-      latitude,
-      longitude,
-      radius,
-      area,
-      district,
-      city,
-      country,
-    });
-  };
+  //   createClaimMutation.mutate({
+  //     userId: user.id,
+  //     latitude,
+  //     longitude,
+  //     radius,
+  //     area,
+  //     district,
+  //     city,
+  //     country,
+  //   });
+  // };
 
   if (!L || !isMapReady) {
     return (

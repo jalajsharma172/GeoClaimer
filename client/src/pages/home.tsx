@@ -100,7 +100,7 @@ export default function Home({ user, onLogout }: HomeProps) {
       />
 
       {/* Top Stats Panel */}
-      <div className="absolute top-4 left-4 right-4 z-20">
+      <div className="absolute top-4 left-45 right-4 z-20">
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-4 border border-white/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -138,20 +138,20 @@ export default function Home({ user, onLogout }: HomeProps) {
           )}
           {locationHistory.length > 0 && (
             <div className="mt-2">
-              <p className="text-xs text-gray-600">Tracked Points: {locationHistory.length}</p>
+              <p className="text-xs text-gray-600">LocationHistory Length: {locationHistory.length}</p>
               {isCircleComplete && (
                 <p className="text-xs text-green-600 font-medium">✓ Circle Completed!</p>
               )}
             </div>
           )}
-          {locationHistory.length > 0 && (
+          {/* {locationHistory.length > 0 && (
             <button
               onClick={clearHistory}
               className="mt-2 w-full text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors"
             >
               Clear History
             </button>
-          )}
+          )} */}
           <button
             onClick={refreshLocation}
             className="mt-2 w-full text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
@@ -162,7 +162,7 @@ export default function Home({ user, onLogout }: HomeProps) {
       </div>
 
       {/* Bottom Action Buttons */}
-      <div className="absolute bottom-4 left-4 right-4 z-20">
+      {/* <div className="absolute bottom-4 left-4 right-4 z-20">
         <div className="flex space-x-3">
           <button
             onClick={() => setShowStats(true)}
@@ -184,16 +184,16 @@ export default function Home({ user, onLogout }: HomeProps) {
             </div>
           </button>
         </div>
-      </div>
+      </div> */}
 
       {/* Modals */}
-      {showStats && (
+      {/* {showStats && (
         <AreaStats user={user} onClose={() => setShowStats(false)} />
-      )}
+      )} */}
       
-      {showLeaderboard && (
+      {/* {showLeaderboard && (
         <Leaderboard onClose={() => setShowLeaderboard(false)} />
-      )}
+      )} */}
     </div>
   );
 }

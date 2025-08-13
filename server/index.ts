@@ -6,7 +6,7 @@ import { initializeDatabase } from "./dbInit";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
+// User Auth Checking ki First Time hai toh DB me add kro varna access do.
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -29,7 +29,7 @@ app.use((req, res, next) => {
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
       }
-
+      console.log(logLine);
       log(logLine);
     }
   });
@@ -37,6 +37,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Initialize database tables first
 (async () => {
   // Initialize database tables first
   try {
