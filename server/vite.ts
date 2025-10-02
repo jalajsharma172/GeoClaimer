@@ -1,12 +1,8 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
-
-const viteLogger = createLogger();
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -20,6 +16,12 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  // Dynamically import Vite and the Vite config only in development to avoid
+  // bundling dev-time deps (like lightningcss) into the Netlify Function.
+  const { createServer: createViteServer, createLogger } = await import("vite");
+  const viteLogger = createLogger();
+  const { default: viteConfig } = await import("../vite.config");
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
@@ -58,10 +60,10 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
-      const page = await vite.transformIndexHtml(url, template);
+      const page = await (vite as any).transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
+      (vite as any).ssrFixStacktrace(e as Error);
       next(e);
     }
   });
