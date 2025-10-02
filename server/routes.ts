@@ -1,5 +1,4 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertClaimSchema, insertCompletedCircleSchema, insertUserPathSchema, insertMapViewPreferencesSchema } from "@shared/schema";
 import { z } from "zod";
@@ -34,7 +33,7 @@ const userPathSchema = insertUserPathSchema.extend({
   country: data.country || undefined,
 }));
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   // Authentication endpoints
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -299,6 +298,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
 }
