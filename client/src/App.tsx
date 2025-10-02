@@ -12,9 +12,9 @@ import type { User } from "@shared/schema";
 function Router() {
   const [user, setUser] = useState<User | null>(null);// User Name
   const [isLoading, setIsLoading] = useState(true);   // IsLoading Status
-
+// Check for existing user Name 
   useEffect(() => {
-    // Check for existing user Name 
+    
     const savedUser = localStorage.getItem('territoryWalkerUser');
     if (savedUser) {
       try {
@@ -36,6 +36,8 @@ function Router() {
     setUser(null);
     localStorage.removeItem('territoryWalkerUser');
   };
+
+  
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
