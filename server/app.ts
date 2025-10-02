@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { serveStatic, log } from "./vite";
 import { initializeDatabase } from "./dbInit";
 import { createServer, type Server } from "http";
 
@@ -54,10 +54,11 @@ export async function createExpressApp(): Promise<{ app: express.Express; server
 
 export async function attachFrontend(app: express.Express, server: Server) {
   if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    const { setupViteDev } = await import("./viteDev");
+    await setupViteDev(app, server);
+    return;
   }
+  serveStatic(app);
 }
 
 
