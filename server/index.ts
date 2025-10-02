@@ -1,8 +1,9 @@
 import express, { type Request, Response, NextFunction, type Express } from "express";
 import { createServer } from "http";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, serveStatic } from "./vite";
 import { initializeDatabase } from "./dbInit";
+import { log } from "./log";
 
 export async function createApp(): Promise<Express> {
     const app = express();
