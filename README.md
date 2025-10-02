@@ -11,6 +11,62 @@ Territory Walker is a geospatial tracking application that enables users to log,
 - **Styling**: Tailwind CSS with shadcn/ui components
 - **State Management**: TanStack React Query for server state
 
+## Deployment (Netlify)
+
+### Required environment variables
+Set these in Netlify Site settings → Build & deploy → Environment:
+
+```
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB?sslmode=require
+# Alternatively provide discrete PG* vars (server/db.ts will construct DATABASE_URL):
+PGHOST=
+PGUSER=
+PGPASSWORD=
+PGDATABASE=
+PGPORT=
+```
+
+### Netlify configuration
+Already included in `netlify.toml`:
+
+```
+[build]
+  command = "npm run build"
+  publish = "dist/public"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/server"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+```
+
+### Install & build
+
+```
+npm ci
+npm run build
+```
+
+### Local development with Netlify emulator
+
+```
+npm run netlify:dev
+```
+
+This serves the Vite client and mounts the Express app via `netlify/functions/server.ts` at `/.netlify/functions/server`. API requests from the client go to `/api/*` and are redirected accordingly.
+
+### Notes
+- The Express app is wrapped with `serverless-http` and exported from `netlify/functions/server.ts`.
+- In production, static assets are served from `dist/public`; dev uses Vite middleware.
+- Database tables auto-initialize on cold start via `server/dbInit.ts`.
+
 ## Core Features
 
 ### User Authentication
