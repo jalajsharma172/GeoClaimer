@@ -1,8 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+
 import { serveStatic, log } from "./vite";
 import { initializeDatabase } from "./dbInit";
-import { createServer, type Server } from "http";
+import { type Server } from "http";
+import { registerRoutes } from "./routes";
 
 export async function createExpressApp(): Promise<{ app: express.Express; server: Server }> {
   const app = express();
@@ -14,10 +15,10 @@ export async function createExpressApp(): Promise<{ app: express.Express; server
     const path = req.path;
     let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-    const originalResJson = res.json;
-    res.json = function (bodyJson, ...args) {
-      capturedJsonResponse = bodyJson;
-      return originalResJson.apply(res, [bodyJson, ...args]);
+    const originalResJson = res.json.bind(res) as (body?: any) => Response;
+    res.json = function (bodyJson?: any) {
+      capturedJsonResponse = bodyJson as Record<string, any> | undefined;
+      return originalResJson(bodyJson);
     } as any;
 
     res.on("finish", () => {
