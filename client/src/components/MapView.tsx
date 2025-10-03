@@ -7,6 +7,7 @@ import useLocationTracker from "@/hooks/useLocationTracker";
 import './map.css';
 import { uploadJsonToIPFS } from './UploadToIPFS';
 import { calculatePolygonArea } from "@shared/utils/geometry";
+import { useNavigate } from "react-router-dom"; // Add this import
 
 // Define the type for a path point (lat and lon)
 interface PathPoint {
@@ -16,6 +17,7 @@ interface PathPoint {
 
 
 function MapView() {
+  const navigate = useNavigate(); // Add this line
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const polylineRef = useRef<L.Polyline | null>(null);
@@ -196,6 +198,30 @@ function MapView() {
   
   return (
       <div id="map" style={{ position: 'relative', height: '100vh', width: '100%' }}>
+          {/* Back to Home Button */}
+          <div style={{
+              position: 'absolute',
+              top: '100px',
+              left: '10px',
+              zIndex: 1000,
+              borderRadius: '100px'
+          }}>
+              <button
+                  onClick={() => navigate("/")}
+                  style={{
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '100%',
+                      padding: '20px 20px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      fontWeight: 'bold'
+                  }}
+              >
+                  ←
+              </button>
+          </div>
           {/* Finalize Polygon Button */}
           <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 1000 }}>
               <button
@@ -214,7 +240,6 @@ function MapView() {
                   Finalize Polygon
               </button>
           </div>
-          
           {/* --- CHANGE #4: The new and improved distance display --- */}
           <div style={{
               position: 'absolute',
@@ -427,8 +452,6 @@ export default MapView;
  
 
 //   }, [position, userPath]);
-
-
 
 
 

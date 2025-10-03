@@ -8,6 +8,8 @@ import Home from "@/pages/home";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import type { User } from "@shared/schema";
+import MapView from "@/components/MapView";
+import Leaderboard from "./components/Leaderboard";
 
 function Router() {
   const [user, setUser] = useState<User | null>(null);// User Name
@@ -55,6 +57,12 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/map">
+        <MapView />
+      </Route>
+      <Route path="/leaderboard">
+        {/* <Leaderboard /> */}
+      </Route>
       <Route path="/">
         {user ? (
           <Home user={user} onLogout={handleLogout} />
@@ -62,7 +70,9 @@ function Router() {
           <Login onLogin={handleLogin} />
         )}
       </Route>
-      <Route component={NotFound} />
+      <Route>
+        <NotFound />
+      </Route>
     </Switch>
   );
 }
