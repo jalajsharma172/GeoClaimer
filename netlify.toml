@@ -1,0 +1,31 @@
+[build]
+  command = "npm run build"
+  publish = "dist/public"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = [
+    "vite",
+    "lightningcss",
+    "@babel/preset-typescript",
+    "@babel/core",
+    "@replit/vite-plugin-cartographer",
+    "@replit/vite-plugin-runtime-error-modal"
+  ]
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/server"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+

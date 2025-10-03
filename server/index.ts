@@ -16,7 +16,7 @@ app.use((req, res, next) => {
   res.json = function (bodyJson, ...args) {
     capturedJsonResponse = bodyJson;
     return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+  } as any;
 
   res.on("finish", () => {
     const duration = Date.now() - start;
@@ -75,3 +75,5 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
   });
 })();
+
+

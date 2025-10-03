@@ -9,6 +9,32 @@ export interface PathPoint extends LatLng {
   timestamp: number;
   accuracy?: number;
 }
+/**
+ * Calculate the area of a polygon using the shoelace formula
+ */
+export function calculatePolygonArea(points: LatLng[]): number {
+  if (points.length < 3) return 0;
+  
+  // Convert to meters using a simple approximation
+  const metersPerDegree = 111320; // approximate meters per degree at equator
+  
+  let area = 0;
+  for (let i = 0; i < points.length; i++) {
+    const j = (i + 1) % points.length;
+    const xi = points[i].lng * metersPerDegree * Math.cos(toRadians(points[i].lat));
+    const yi = points[i].lat * metersPerDegree;
+    const xj = points[j].lng * metersPerDegree * Math.cos(toRadians(points[j].lat));
+    const yj = points[j].lat * metersPerDegree;
+    
+    area += xi * yj;
+    area -= xj * yi;
+  }
+  
+  return Math.abs(area) / 2;
+}
+
+
+
 
 /**
  * Calculate distance between two points using Haversine formula
@@ -131,29 +157,6 @@ export function findPathIntersections(points: PathPoint[]): Array<{
   return intersections;
 }
 
-/**
- * Calculate the area of a polygon using the shoelace formula
- */
-export function calculatePolygonArea(points: LatLng[]): number {
-  if (points.length < 3) return 0;
-  
-  // Convert to meters using a simple approximation
-  const metersPerDegree = 111320; // approximate meters per degree at equator
-  
-  let area = 0;
-  for (let i = 0; i < points.length; i++) {
-    const j = (i + 1) % points.length;
-    const xi = points[i].lng * metersPerDegree * Math.cos(toRadians(points[i].lat));
-    const yi = points[i].lat * metersPerDegree;
-    const xj = points[j].lng * metersPerDegree * Math.cos(toRadians(points[j].lat));
-    const yj = points[j].lat * metersPerDegree;
-    
-    area += xi * yj;
-    area -= xj * yi;
-  }
-  
-  return Math.abs(area) / 2;
-}
 
 /**
  * Get intersection point of two line segments

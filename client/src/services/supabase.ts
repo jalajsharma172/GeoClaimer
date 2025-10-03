@@ -80,3 +80,5 @@ export class SupabaseService {
 }
 
 export const supabase = new SupabaseService();
+
+

@@ -16,7 +16,7 @@ function useLocationTracker(onPositionUpdate: (position: { lat: number; lon: num
         const acc = position.coords.accuracy;
         onPositionUpdate({ lat, lon, acc });
       });
-    }, 5000);
+    }, 3000);
 
     return () => clearInterval(intervalId); // Cleanup interval on unmount
   }, [onPositionUpdate]);
