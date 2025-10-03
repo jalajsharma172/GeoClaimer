@@ -61,7 +61,7 @@ function Router() {
         <MapView />
       </Route>
       <Route path="/leaderboard">
-        {/* <Leaderboard /> */}
+        <Leaderboard />
       </Route>
       <Route path="/">
         {user ? (
