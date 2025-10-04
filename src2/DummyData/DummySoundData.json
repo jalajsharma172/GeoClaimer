@@ -1,0 +1,14 @@
+[
+    { "date": "09-01", "decibel": 65, "safe-limit": 85 },
+    { "date": "09-02", "decibel": 68, "safe-limit": 85 },
+    { "date": "09-03", "decibel": 72, "safe-limit": 85 },
+    { "date": "09-04", "decibel": 78, "safe-limit": 85 },
+    { "date": "09-05", "decibel": 75, "safe-limit": 85 },
+    { "date": "09-06", "decibel": 81, "safe-limit": 85 },
+    { "date": "09-07", "decibel": 86, "safe-limit": 85 },
+    { "date": "09-08", "decibel": 88, "safe-limit": 85 },
+    { "date": "09-09", "decibel": 82, "safe-limit": 85 },
+    { "date": "09-10", "decibel": 79, "safe-limit": 85 },
+    { "date": "09-11", "decibel": 74, "safe-limit": 85 },
+    { "date": "09-12", "decibel": 70, "safe-limit": 85 }
+]

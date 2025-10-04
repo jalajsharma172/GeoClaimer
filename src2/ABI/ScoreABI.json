@@ -1,0 +1,262 @@
+{
+    "abi": [
+        {
+            "type": "constructor",
+            "inputs": [],
+            "stateMutability": "nonpayable"
+        },
+        {
+            "type": "function",
+            "name": "contributionScores",
+            "inputs": [
+                {
+                    "name": "",
+                    "type": "address",
+                    "internalType": "address"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "stateMutability": "view"
+        },
+        {
+            "type": "function",
+            "name": "getContributionScore",
+            "inputs": [
+                {
+                    "name": "user",
+                    "type": "address",
+                    "internalType": "address"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "stateMutability": "view"
+        },
+        {
+            "type": "function",
+            "name": "setContributionScore",
+            "inputs": [
+                {
+                    "name": "user",
+                    "type": "address",
+                    "internalType": "address"
+                },
+                {
+                    "name": "score",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+        },
+        {
+            "type": "event",
+            "name": "ScoreUpdated",
+            "inputs": [
+                {
+                    "name": "user",
+                    "type": "address",
+                    "indexed": true,
+                    "internalType": "address"
+                },
+                {
+                    "name": "newScore",
+                    "type": "uint256",
+                    "indexed": false,
+                    "internalType": "uint256"
+                }
+            ],
+            "anonymous": false
+        }
+    ],
+    "bytecode": {
+        "object": "0x6080604052348015600e575f5ffd5b506103038061001c5f395ff3fe608060405234801561000f575f5ffd5b506004361061003f575f3560e01c80636c55b0a714610043578063ad7e34b414610073578063e800dfee1461008f575b5f5ffd5b61005d60048036038101906100589190610209565b6100bf565b60405161006a919061024c565b60405180910390f35b61008d6004803603810190610088919061028f565b6100d3565b005b6100a960048036038101906100a49190610209565b610166565b6040516100b6919061024c565b60405180910390f35b5f602052805f5260405f205f915090505481565b805f5f8473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055508173ffffffffffffffffffffffffffffffffffffffff167f66ead48cfe0e1d1aa8bad492e906c348dfcfeecbf3b7b2cdf9b1f3cfa42a29458260405161015a919061024c565b60405180910390a25050565b5f5f5f8373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20549050919050565b5f5ffd5b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f6101d8826101af565b9050919050565b6101e8816101ce565b81146101f2575f5ffd5b50565b5f81359050610203816101df565b92915050565b5f6020828403121561021e5761021d6101ab565b5b5f61022b848285016101f5565b91505092915050565b5f819050919050565b61024681610234565b82525050565b5f60208201905061025f5f83018461023d565b92915050565b61026e81610234565b8114610278575f5ffd5b50565b5f8135905061028981610265565b92915050565b5f5f604083850312156102a5576102a46101ab565b5b5f6102b2858286016101f5565b92505060206102c38582860161027b565b915050925092905056fea264697066735822122027da07e7177f6ee08e4027c1716331048b538c3a149fa84dea5685ebb4574fac64736f6c634300081e0033",
+        "sourceMap": "234:1132:42:-:0;;;535:16;;;;;;;;;;234:1132;;;;;;",
+        "linkReferences": {}
+    },
+    "deployedBytecode": {
+        "object": "0x608060405234801561000f575f5ffd5b506004361061003f575f3560e01c80636c55b0a714610043578063ad7e34b414610073578063e800dfee1461008f575b5f5ffd5b61005d60048036038101906100589190610209565b6100bf565b60405161006a919061024c565b60405180910390f35b61008d6004803603810190610088919061028f565b6100d3565b005b6100a960048036038101906100a49190610209565b610166565b6040516100b6919061024c565b60405180910390f35b5f602052805f5260405f205f915090505481565b805f5f8473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055508173ffffffffffffffffffffffffffffffffffffffff167f66ead48cfe0e1d1aa8bad492e906c348dfcfeecbf3b7b2cdf9b1f3cfa42a29458260405161015a919061024c565b60405180910390a25050565b5f5f5f8373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20549050919050565b5f5ffd5b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f6101d8826101af565b9050919050565b6101e8816101ce565b81146101f2575f5ffd5b50565b5f81359050610203816101df565b92915050565b5f6020828403121561021e5761021d6101ab565b5b5f61022b848285016101f5565b91505092915050565b5f819050919050565b61024681610234565b82525050565b5f60208201905061025f5f83018461023d565b92915050565b61026e81610234565b8114610278575f5ffd5b50565b5f8135905061028981610265565b92915050565b5f5f604083850312156102a5576102a46101ab565b5b5f6102b2858286016101f5565b92505060206102c38582860161027b565b915050925092905056fea264697066735822122027da07e7177f6ee08e4027c1716331048b538c3a149fa84dea5685ebb4574fac64736f6c634300081e0033",
+        "sourceMap": "234:1132:42:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;410:53;;;;;;;;;;;;;:::i;:::-;;:::i;:::-;;;;;;;:::i;:::-;;;;;;;;871:157;;;;;;;;;;;;;:::i;:::-;;:::i;:::-;;1240:124;;;;;;;;;;;;;:::i;:::-;;:::i;:::-;;;;;;;:::i;:::-;;;;;;;;410:53;;;;;;;;;;;;;;;;;:::o;871:157::-;976:5;949:18;:24;968:4;949:24;;;;;;;;;;;;;;;:32;;;;1009:4;996:25;;;1015:5;996:25;;;;;;:::i;:::-;;;;;;;;871:157;;:::o;1240:124::-;1307:7;1333:18;:24;1352:4;1333:24;;;;;;;;;;;;;;;;1326:31;;1240:124;;;:::o;88:117:45:-;197:1;194;187:12;334:126;371:7;411:42;404:5;400:54;389:65;;334:126;;;:::o;466:96::-;503:7;532:24;550:5;532:24;:::i;:::-;521:35;;466:96;;;:::o;568:122::-;641:24;659:5;641:24;:::i;:::-;634:5;631:35;621:63;;680:1;677;670:12;621:63;568:122;:::o;696:139::-;742:5;780:6;767:20;758:29;;796:33;823:5;796:33;:::i;:::-;696:139;;;;:::o;841:329::-;900:6;949:2;937:9;928:7;924:23;920:32;917:119;;;955:79;;:::i;:::-;917:119;1075:1;1100:53;1145:7;1136:6;1125:9;1121:22;1100:53;:::i;:::-;1090:63;;1046:117;841:329;;;;:::o;1176:77::-;1213:7;1242:5;1231:16;;1176:77;;;:::o;1259:118::-;1346:24;1364:5;1346:24;:::i;:::-;1341:3;1334:37;1259:118;;:::o;1383:222::-;1476:4;1514:2;1503:9;1499:18;1491:26;;1527:71;1595:1;1584:9;1580:17;1571:6;1527:71;:::i;:::-;1383:222;;;;:::o;1611:122::-;1684:24;1702:5;1684:24;:::i;:::-;1677:5;1674:35;1664:63;;1723:1;1720;1713:12;1664:63;1611:122;:::o;1739:139::-;1785:5;1823:6;1810:20;1801:29;;1839:33;1866:5;1839:33;:::i;:::-;1739:139;;;;:::o;1884:474::-;1952:6;1960;2009:2;1997:9;1988:7;1984:23;1980:32;1977:119;;;2015:79;;:::i;:::-;1977:119;2135:1;2160:53;2205:7;2196:6;2185:9;2181:22;2160:53;:::i;:::-;2150:63;;2106:117;2262:2;2288:53;2333:7;2324:6;2313:9;2309:22;2288:53;:::i;:::-;2278:63;;2233:118;1884:474;;;;;:::o",
+        "linkReferences": {}
+    },
+    "methodIdentifiers": {
+        "contributionScores(address)": "6c55b0a7",
+        "getContributionScore(address)": "e800dfee",
+        "setContributionScore(address,uint256)": "ad7e34b4"
+    },
+    "rawMetadata": "{\"compiler\":{\"version\":\"0.8.30+commit.73712a01\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newScore\",\"type\":\"uint256\"}],\"name\":\"ScoreUpdated\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"contributionScores\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"getContributionScore\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"score\",\"type\":\"uint256\"}],\"name\":\"setContributionScore\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"EchoNet Team\",\"kind\":\"dev\",\"methods\":{\"getContributionScore(address)\":{\"params\":{\"user\":\"The address of the user to query.\"},\"returns\":{\"_0\":\"The current contribution score.\"}},\"setContributionScore(address,uint256)\":{\"params\":{\"score\":\"The new contribution score for the user.\",\"user\":\"The address of the user whose score is being set.\"}}},\"title\":\"SimplifiedMainContract\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"contributionScores(address)\":{\"notice\":\"Stores the contribution score for each user address. The hook contract will read from this mapping.\"},\"getContributionScore(address)\":{\"notice\":\"A public view function to easily check the contribution score of any user.\"},\"setContributionScore(address,uint256)\":{\"notice\":\"Allows the contract owner to set the contribution score for a specific user. This is the primary function for demonstrating the dynamic fee hook.\"}},\"notice\":\"Simplified version of MainContract for demo. No admin ownership \\u2014 scores are publically settable.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/SimplifiedMainContract.sol\":\"SimplifiedMainContract\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[\":@ensdomains/=lib/v4-core/node_modules/@ensdomains/\",\":@openzeppelin/=lib/v4-core/lib/openzeppelin-contracts/\",\":ds-test/=lib/v4-core/lib/forge-std/lib/ds-test/src/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/\",\":hardhat/=lib/v4-core/node_modules/hardhat/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/\",\":solmate/=lib/v4-core/lib/solmate/\",\":v4-core/=lib/v4-core/src/\"]},\"sources\":{\"src/SimplifiedMainContract.sol\":{\"keccak256\":\"0xa7e7eeba602fbb1267439a621d422902730f3d0d3cb9ec89f50a76342edccd13\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://d56ea1936f2b2bd4aabafcf08896c9cbf9765b3d9b1f9a34db4e1c19521ab197\",\"dweb:/ipfs/QmRDLmtoDAwqoshDrcRFsCH6ZN4vpHeWBp8qUfx4PtzbRf\"]}},\"version\":1}",
+    "metadata": {
+        "compiler": {
+            "version": "0.8.30+commit.73712a01"
+        },
+        "language": "Solidity",
+        "output": {
+            "abi": [
+                {
+                    "inputs": [],
+                    "stateMutability": "nonpayable",
+                    "type": "constructor"
+                },
+                {
+                    "inputs": [
+                        {
+                            "internalType": "address",
+                            "name": "user",
+                            "type": "address",
+                            "indexed": true
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "newScore",
+                            "type": "uint256",
+                            "indexed": false
+                        }
+                    ],
+                    "type": "event",
+                    "name": "ScoreUpdated",
+                    "anonymous": false
+                },
+                {
+                    "inputs": [
+                        {
+                            "internalType": "address",
+                            "name": "",
+                            "type": "address"
+                        }
+                    ],
+                    "stateMutability": "view",
+                    "type": "function",
+                    "name": "contributionScores",
+                    "outputs": [
+                        {
+                            "internalType": "uint256",
+                            "name": "",
+                            "type": "uint256"
+                        }
+                    ]
+                },
+                {
+                    "inputs": [
+                        {
+                            "internalType": "address",
+                            "name": "user",
+                            "type": "address"
+                        }
+                    ],
+                    "stateMutability": "view",
+                    "type": "function",
+                    "name": "getContributionScore",
+                    "outputs": [
+                        {
+                            "internalType": "uint256",
+                            "name": "",
+                            "type": "uint256"
+                        }
+                    ]
+                },
+                {
+                    "inputs": [
+                        {
+                            "internalType": "address",
+                            "name": "user",
+                            "type": "address"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "score",
+                            "type": "uint256"
+                        }
+                    ],
+                    "stateMutability": "nonpayable",
+                    "type": "function",
+                    "name": "setContributionScore"
+                }
+            ],
+            "devdoc": {
+                "kind": "dev",
+                "methods": {
+                    "getContributionScore(address)": {
+                        "params": {
+                            "user": "The address of the user to query."
+                        },
+                        "returns": {
+                            "_0": "The current contribution score."
+                        }
+                    },
+                    "setContributionScore(address,uint256)": {
+                        "params": {
+                            "score": "The new contribution score for the user.",
+                            "user": "The address of the user whose score is being set."
+                        }
+                    }
+                },
+                "version": 1
+            },
+            "userdoc": {
+                "kind": "user",
+                "methods": {
+                    "contributionScores(address)": {
+                        "notice": "Stores the contribution score for each user address. The hook contract will read from this mapping."
+                    },
+                    "getContributionScore(address)": {
+                        "notice": "A public view function to easily check the contribution score of any user."
+                    },
+                    "setContributionScore(address,uint256)": {
+                        "notice": "Allows the contract owner to set the contribution score for a specific user. This is the primary function for demonstrating the dynamic fee hook."
+                    }
+                },
+                "version": 1
+            }
+        },
+        "settings": {
+            "remappings": [
+                "@ensdomains/=lib/v4-core/node_modules/@ensdomains/",
+                "@openzeppelin/=lib/v4-core/lib/openzeppelin-contracts/",
+                "ds-test/=lib/v4-core/lib/forge-std/lib/ds-test/src/",
+                "erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/",
+                "forge-std/=lib/forge-std/src/",
+                "halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/",
+                "hardhat/=lib/v4-core/node_modules/hardhat/",
+                "openzeppelin-contracts/=lib/openzeppelin-contracts/",
+                "solmate/=lib/v4-core/lib/solmate/",
+                "v4-core/=lib/v4-core/src/"
+            ],
+            "optimizer": {
+                "enabled": false,
+                "runs": 200
+            },
+            "metadata": {
+                "bytecodeHash": "ipfs"
+            },
+            "compilationTarget": {
+                "src/SimplifiedMainContract.sol": "SimplifiedMainContract"
+            },
+            "evmVersion": "cancun",
+            "libraries": {}
+        },
+        "sources": {
+            "src/SimplifiedMainContract.sol": {
+                "keccak256": "0xa7e7eeba602fbb1267439a621d422902730f3d0d3cb9ec89f50a76342edccd13",
+                "urls": [
+                    "bzz-raw://d56ea1936f2b2bd4aabafcf08896c9cbf9765b3d9b1f9a34db4e1c19521ab197",
+                    "dweb:/ipfs/QmRDLmtoDAwqoshDrcRFsCH6ZN4vpHeWBp8qUfx4PtzbRf"
+                ],
+                "license": "MIT"
+            }
+        },
+        "version": 1
+    },
+    "id": 42
+}

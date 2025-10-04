@@ -1,0 +1,47 @@
+[
+  {
+    "id": "data-001",
+    "owner": "0xB5f278f22c5E5C42174FC312cc593493d2f3570D",
+    "deviceId": "00:1A:2B:3C:4D:5E",
+    "timeline": "2025-09-21T12:30:00Z",
+    "data": {
+      "decibel": 65.5
+    }
+  },
+  {
+    "id": "data-002",
+    "owner": "0x1a2B3c4D5e6F7a8B9c0D1e2F3a4B5c6d7E8f9A0b",
+    "deviceId": "11:22:33:44:55:66",
+    "timeline": "2025-09-21T12:32:15Z",
+    "data": {
+      "decibel": 72.1
+    }
+  },
+  {
+    "id": "data-003",
+    "owner": "0xB5f278f22c5E5C42174FC312cc593493d2f3570D",
+    "deviceId": "00:1A:2B:3C:4D:5E",
+    "timeline": "2025-09-21T12:35:00Z",
+    "data": {
+      "decibel": 68.9
+    }
+  },
+  {
+    "id": "data-004",
+    "owner": "0xFfEeDdCcBbAa99887766554433221100abCdeFfF",
+    "deviceId": "AA:BB:CC:DD:EE:FF",
+    "timeline": "2025-09-21T12:40:30Z",
+    "data": {
+      "decibel": 81.3
+    }
+  },
+  {
+    "id": "data-005",
+    "owner": "0x1a2B3c4D5e6F7a8B9c0D1e2F3a4B5c6d7E8f9A0b",
+    "deviceId": "11:22:33:44:55:66",
+    "timeline": "2025-09-21T12:42:45Z",
+    "data": {
+      "decibel": 75.0
+    }
+  }
+]
