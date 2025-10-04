@@ -59,7 +59,7 @@ export default function Home({ user, onLogout }: HomeProps) {
       {/* Info Section */}
       <section className="max-w-3xl mx-auto mt-12 p-8 bg-white rounded-xl shadow-lg">
         <h1 className="text-3xl font-bold text-blue-800 mb-4">
-          WelcomeWelcome to Territory Walker!
+          Welcome to Territory Walker!
         </h1>
         <p className="text-lg text-gray-700 mb-6">
           Territory Walker is a geospatial tracking app where you can log your

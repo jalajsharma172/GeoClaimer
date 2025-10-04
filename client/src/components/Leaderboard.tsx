@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = "https://YOUR_PROJECT_ID.supabase.co";
-const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
+// Use your actual Supabase credentials from .env
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ;
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY ;
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface LeaderboardRow {
@@ -15,22 +17,28 @@ export default function Leaderboard() {
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-try{
-    useEffect(() => {
+  useEffect(() => {
     async function fetchLeaderboard() {
       setLoading(true);
-      const { data, error } = await supabase.from("leaderboard").select("id,username,nft_count").order("nft_count", { ascending: false });
-      if (!error && data) {
+    const { data, error } = await supabase
+      .from("NFT")
+      .select("*"); // Select all columns
+
+      console.log(data);
+      if (error) {
+        console.error("Error fetching leaderboard:", error.message);
+        setRows([]);
+      } else if (data) {
         setRows(data);
+         console.log("Got Data from Supabase:", data);
+      } else {
+        setRows([]);
+        console.log("No data returned from Supabase");
       }
       setLoading(false);
     }
     fetchLeaderboard();
   }, []);
-}catch(err){
-  console.error("Error fetching leaderboard:", err);
-  setLoading(false);
-}
 
   return (
     <div className="max-w-2xl mx-auto mt-12 p-8 bg-white rounded-xl shadow-lg">
