@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ethers } from "ethers";
-import ClaimEarthNFT from "./ClaimEarthNFT.json"; // Your contract's ABI
+import ClaimEarthNFT from "./abi.json"; // Your contract's ABI
 const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
 
 // --- TypeScript Definitions ---

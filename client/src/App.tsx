@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import type { User } from "@shared/schema";
 import MapView from "@/components/MapView";
 import Leaderboard from "./components/Leaderboard";
+import Dashboard from "./components/Dashboard";
 
 function Router() {
   const [user, setUser] = useState<User | null>(null);// User Name
@@ -63,6 +64,12 @@ function Router() {
       <Route path="/leaderboard">
         <Leaderboard />
       </Route>
+      <Route path="/dashboard">
+        <Dashboard/>
+      </Route>
+      
+
+
       <Route path="/">
         {user ? (
           <Home user={user} onLogout={handleLogout} />
