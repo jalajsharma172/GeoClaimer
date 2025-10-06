@@ -40,6 +40,14 @@ function filterMetadata(jsonData: any): any {
   // You can customize this based on your data structure
   const metadata: any = {};
   
+  // Handle the specific NFT format: {recipient, tokenURI, tokenId}
+  if (jsonData.recipient || jsonData.tokenURI || jsonData.tokenId) {
+    metadata.recipient = jsonData.recipient || '';
+    metadata.tokenURI = jsonData.tokenURI || '';
+    metadata.tokenId = jsonData.tokenId || '';
+    metadata.nftData = true; // Flag to indicate this is NFT data
+  }
+  
   // Common metadata fields that might be relevant
   const relevantFields = [
     'username', 'user', 'name', 'id', 'userId',
@@ -49,7 +57,8 @@ function filterMetadata(jsonData: any): any {
     'type', 'category', 'status', 'state',
     'metadata', 'data', 'info', 'details',
     'nft', 'token', 'hash', 'contract', 'blockchain',
-    'game', 'achievement', 'progress', 'stats'
+    'game', 'achievement', 'progress', 'stats',
+    'recipient', 'tokenURI', 'tokenId' // Added NFT specific fields
   ];
   
   // Extract fields that exist in the data
@@ -75,6 +84,15 @@ function filterMetadata(jsonData: any): any {
 }
 
 function extractUsername(jsonData: any): string {
+  // For NFT data format, use recipient as username if available
+  if (jsonData.recipient && typeof jsonData.recipient === 'string' && jsonData.recipient.trim() !== '') {
+    // If recipient is a wallet address, create a shortened version
+    if (jsonData.recipient.startsWith('0x') && jsonData.recipient.length === 42) {
+      return `user_${jsonData.recipient.slice(0, 6)}...${jsonData.recipient.slice(-4)}`;
+    }
+    return jsonData.recipient;
+  }
+  
   // Try to extract username from various possible fields
   const possibleUsernameFields = [
     'username', 'user', 'userName', 'user_name',
@@ -114,6 +132,26 @@ function calculateScore(metadata: any): number {
   // Calculate score based on metadata
   // You can customize this logic based on your requirements
   let score = 0;
+  
+  // NFT specific scoring
+  if (metadata.nftData) {
+    score += 100; // Base score for NFT creation
+    
+    // Bonus for having tokenURI
+    if (metadata.tokenURI && metadata.tokenURI.trim() !== '') {
+      score += 50;
+    }
+    
+    // Bonus for having tokenId
+    if (metadata.tokenId && metadata.tokenId.trim() !== '') {
+      score += 30;
+    }
+    
+    // Bonus for having recipient
+    if (metadata.recipient && metadata.recipient.trim() !== '') {
+      score += 20;
+    }
+  }
   
   // Basic scoring logic
   if (metadata.score && typeof metadata.score === 'number') {
@@ -481,7 +519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  
+
 
   app.get("/api/leaderboard/user/:username", async (req, res) => {
     try {
@@ -493,10 +531,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test endpoint to generate sample data for testing
+  // Test endpoint to generate sample data for testing (GET)
   app.get("/api/test-data", async (req, res) => {
     try {
-      const sampleData = {
+      // Generate sample data in NFT format
+      const nftSampleData = {
+        recipient: "0x742d35" + Math.random().toString(16).substr(2, 8) + "1234567890abcdef",
+        tokenURI: `https://ipfs.io/ipfs/Qm${Math.random().toString(36).substr(2, 44)}`,
+        tokenId: Math.floor(Math.random() * 10000).toString()
+      };
+      
+      // Also provide general format sample
+      const generalSampleData = {
         username: "testUser_" + Date.now(),
         score: Math.floor(Math.random() * 1000),
         level: Math.floor(Math.random() * 50),
@@ -516,36 +562,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         message: "Sample data for testing",
-        sampleData,
-        instruction: "POST this data to /api/submit-data to test the API"
+        nftFormatSample: nftSampleData,
+        generalFormatSample: generalSampleData,
+        instruction: "POST either sample data to /api/submit-data to test the API"
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to generate test data" });
     }
   });
 
-  // Main POST API endpoint to accept JSON data and filter metadata
+  // Test endpoint to receive NFT data for testing (POST)
+  app.post("/api/test-data", async (req, res) => {
+    try {
+      console.log("Received test NFT data:", JSON.stringify(req.body, null, 2));
+      
+      const { recipient, tokenURI, tokenId } = req.body;
+      
+      // Validate NFT format
+      if (!recipient || !tokenURI || !tokenId) {
+        return res.status(400).json({ 
+          message: "Invalid NFT data format", 
+          error: "Missing required fields: recipient, tokenURI, or tokenId",
+          received: req.body
+        });
+      }
+
+      // Process the data (same as submit-data but for testing)
+      const metadata = filterMetadata(req.body);
+      const username = extractUsername(req.body);
+      const score = calculateScore(metadata);
+
+      res.json({ 
+        message: "Test NFT data received and processed successfully",
+        originalData: req.body,
+        processedData: {
+          username: username,
+          score: score,
+          metadata: metadata
+        },
+        note: "This is a test endpoint. Use POST /api/submit-data to actually save to database."
+      });
+
+    } catch (error) {
+      console.error("Test data error:", error);
+      res.status(500).json({ 
+        message: "Failed to process test data",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  // Main POST API endpoint to accept NFT JSON data and save to database
   app.post("/api/submit-data", async (req, res) => {
     try {
-      console.log("Received JSON data:", JSON.stringify(req.body, null, 2));
+      console.log("Received NFT data:", JSON.stringify(req.body, null, 2));
       
-      const jsonData = req.body;
+      const { recipient, tokenURI, tokenId } = req.body;
       
-      // Validate that we have some data
-      if (!jsonData || typeof jsonData !== 'object') {
+      // Validate NFT format - all three fields are required
+      if (!recipient || !tokenURI || !tokenId) {
         return res.status(400).json({ 
-          message: "Invalid JSON data", 
-          error: "Request body must be a valid JSON object" 
+          message: "Invalid NFT data format", 
+          error: "Missing required fields: recipient, tokenURI, and tokenId are all required",
+          received: req.body,
+          expectedFormat: {
+            recipient: "0x...",
+            tokenURI: "https://ipfs.io/ipfs/...",
+            tokenId: "string"
+          }
+        });
+      }
+
+      // Validate recipient format (should be an Ethereum address)
+      if (!recipient.startsWith('0x') || recipient.length !== 42) {
+        return res.status(400).json({ 
+          message: "Invalid recipient format", 
+          error: "Recipient must be a valid Ethereum address (0x... with 42 characters)",
+          received: recipient
+        });
+      }
+
+      // Validate tokenURI format (should be a valid URI)```
+      if (!tokenURI.startsWith('http')) {
+        return res.status(400).json({ 
+          message: "Invalid tokenURI format", 
+          error: "TokenURI must be a valid HTTP/HTTPS URL",
+          received: tokenURI
         });
       }
 
       // Filter and extract metadata
-      const metadata = filterMetadata(jsonData);
+      const metadata = filterMetadata(req.body);
       
-      // Extract username (you can modify this logic based on your data structure)
-      const username = extractUsername(jsonData);
+      // Extract username from recipient
+      const username = extractUsername(req.body);
       
-      // Calculate score (optional, based on your business logic)
+      // Calculate score based on NFT data
       const score = calculateScore(metadata);
 
       // Create LeaderTable entry
@@ -556,9 +688,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rank: 0 // Will be calculated later if needed
       };
 
-      console.log("Filtered metadata:", metadata);
-      console.log("Extracted username:", username);
-      console.log("Calculated score:", score);
+      console.log("Processed NFT data:");
+      console.log("- Recipient:", recipient);
+      console.log("- TokenURI:", tokenURI);
+      console.log("- TokenId:", tokenId);
+      console.log("- Generated username:", username);
+      console.log("- Calculated score:", score);
 
       // Validate the entry before saving
       const validatedEntry = insertLeaderTableSchema.parse(leaderEntry);
@@ -566,18 +701,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save to database
       const savedEntry = await storage.createLeaderTableEntry(validatedEntry);
       
-      console.log("Data saved to LeaderTable:", savedEntry.id);
+      console.log("NFT data saved to LeaderTable with ID:", savedEntry.id);
 
       res.json({ 
-        message: "Data processed and saved successfully",
+        message: "NFT data processed and saved successfully",
         entryId: savedEntry.id,
-        username: username,
-        score: score,
-        metadata: metadata
+        nftData: {
+          recipient: recipient,
+          tokenURI: tokenURI,
+          tokenId: tokenId
+        },
+        processedData: {
+          username: username,
+          score: score,
+          metadata: metadata
+        }
       });
 
     } catch (error) {
-      console.error("Submit data error:", error);
+      console.error("Submit NFT data error:", error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
@@ -587,7 +729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ 
-        message: "Failed to process and save data",
+        message: "Failed to process and save NFT data",
         error: error instanceof Error ? error.message : "Unknown error"
       });
     }
