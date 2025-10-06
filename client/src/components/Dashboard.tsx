@@ -870,31 +870,26 @@ export default function Dashboard() {
                               </div>
                             </div>
                             <div className="flex flex-col gap-2">
-                              {nft.minted === 0 ? (
-                                <button 
-                                  onClick={() => mintNFTFromHash(nft)}
-                                  disabled={connectionStatus !== "connected" || claimingNFT === nft.id}
-                                  className={`px-4 py-2 rounded-xl font-bold text-white shadow-lg transition-all duration-200 min-w-20 ${
-                                    connectionStatus === "connected" && claimingNFT !== nft.id
-                                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105' 
-                                      : 'bg-gray-400 cursor-not-allowed'
-                                  }`}
-                                >
-                                  {claimingNFT === nft.id ? (
-                                    <div className="flex items-center gap-1">
-                                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    </div>
-                                  ) : connectionStatus === "connected" ? (
-                                    'Mint'
-                                  ) : (
-                                    'Connect'
-                                  )}
-                                </button>
-                              ) : (
-                                <div className="px-4 py-2 rounded-xl font-bold text-white bg-green-500 min-w-20 text-center">
-                                  ✅ Minted
-                                </div>
-                              )}
+                              {/* Always show mint button - removed conditional rendering */}
+                              <button 
+                                onClick={() => mintNFTFromHash(nft)}
+                                disabled={connectionStatus !== "connected" || claimingNFT === nft.id}
+                                className={`px-4 py-2 rounded-xl font-bold text-white shadow-lg transition-all duration-200 min-w-20 ${
+                                  connectionStatus === "connected" && claimingNFT !== nft.id
+                                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105' 
+                                    : 'bg-gray-400 cursor-not-allowed'
+                                }`}
+                              >
+                                {claimingNFT === nft.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  </div>
+                                ) : connectionStatus === "connected" ? (
+                                  'Mint'
+                                ) : (
+                                  'Connect'
+                                )}
+                              </button>
                               <button
                                 onClick={() => navigator.clipboard.writeText(nft.hashjson)}
                                 className="px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded transition-colors"
