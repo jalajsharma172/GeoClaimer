@@ -94,6 +94,41 @@ export async function initializeDatabase() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+
+    // Create UserNFT table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS "UserNFT" (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        username TEXT NOT NULL,
+        hashjson TEXT NOT NULL,
+        minted INTEGER DEFAULT 0 NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Add missing columns if they don't exist
+    await db.execute(sql`
+      ALTER TABLE "UserNFT" 
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()
+    `);
+    
+    await db.execute(sql`
+      ALTER TABLE "UserNFT" 
+      ADD COLUMN IF NOT EXISTS minted INTEGER DEFAULT 0 NOT NULL
+    `);
+
+    // Create LeaderTable
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS "LeaderTable" (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        username TEXT NOT NULL,
+        metadata TEXT NOT NULL,
+        score REAL DEFAULT 0,
+        rank INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
     
     console.log('Database tables initialized successfully!');
   } catch (error) {

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
+import CLAIM_EARTH_NFT_ABI from "./abi.json"; // Import the ABI from a separate JSON file
+import { userNFTAPI } from "../App"; // Import userNFT API functions
 
 declare global {
   interface Window {
@@ -13,16 +15,12 @@ interface NFT {
   tokenURI: string;
 }
 
-// Contract ABI - Generated from your smart contract
-const CLAIM_EARTH_NFT_ABI = [
-  "function mintNFT(string memory tokenURI) public returns (uint256)",
-  "function tokenCounter() public view returns (uint256)",
-  "function balanceOf(address owner) public view returns (uint256)",
-  "event NftMinted(address recipient, string tokenURI, uint256 tokenId)"
-];
+  // Replace with your actual contract address
+  // Check initial wallet connection and set up listeners
+  // Update user-specific data when address changes
 
-// Replace with your actual contract address
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE";
+
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS ;
 
 const mockNFTs: NFT[] = [
   { area: "Area 51", hash: "0xabc123", tokenURI: "ipfs://QmArea51Metadata" },
@@ -35,6 +33,15 @@ const mockNFTs: NFT[] = [
 // Connection status types
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
+// Interface for UserNFT data
+interface UserNFTData {
+  id: string;
+  username: string;
+  hashjson: string;
+  minted: number; // 0 = false (not minted), 1 = true (minted)
+  createdAt: string;
+}
+
 export default function Dashboard() {
   const [userAddress, setUserAddress] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
@@ -45,8 +52,16 @@ export default function Dashboard() {
   const [userNFTCount, setUserNFTCount] = useState<number>(0);
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
   const [signer, setSigner] = useState<ethers.Signer | null>(null);
+  
+  // New state for user's NFT data
+  const [userNFTData, setUserNFTData] = useState<UserNFTData[]>([]);
+  const [loadingNFTData, setLoadingNFTData] = useState<boolean>(false);
+  const [currentUsername, setCurrentUsername] = useState<string>("");
 
-  // Check initial wallet connection and set up listeners
+    // Check initial wallet connection and set up listeners
+  // handleSuccessfulConnection---setUserAddress(address);// Form----// Load blockchain data
+  //resetConnection
+
   useEffect(() => {
     initializeWalletConnection();
     
@@ -93,7 +108,7 @@ export default function Dashboard() {
     }
   };
 
-  const setupEventListeners = () => {
+  const setupEventListeners = () => { 
     if (window.ethereum) {
       window.ethereum.on("accountsChanged", handleAccountsChanged);
       window.ethereum.on("chainChanged", handleChainChanged);
@@ -112,7 +127,7 @@ export default function Dashboard() {
   };
 
   const handleAccountsChanged = async (accounts: string[]) => {
-    console.log("Accounts changed:", accounts);
+    console.log("Accounts changed:", accounts); 
     
     if (accounts.length === 0) {
       // User disconnected all accounts via MetaMask UI
@@ -124,8 +139,7 @@ export default function Dashboard() {
   };
 
   const handleChainChanged = (chainId: string) => {
-    console.log("Chain changed:", chainId);
-    // Reload the page when network changes
+    console.log("Chain changed:", chainId); 
     window.location.reload();
   };
 
@@ -147,7 +161,7 @@ export default function Dashboard() {
 
   const handleSuccessfulConnection = async (address: string) => {
     try {
-      setUserAddress(address);
+      setUserAddress(address);// Form
       setConnectionStatus("connected");
       setError("");
       
@@ -158,8 +172,16 @@ export default function Dashboard() {
       setProvider(newProvider);
       setSigner(newSigner);
       
+      // Get username from localStorage and fetch NFT data
+      const username = getUsernameFromStorage();
+      setCurrentUsername(username);
+      await fetchUserNFTData(username);
+      
       // Load blockchain data
-      await loadTokenCounter(newProvider);
+      const tokennumber = await loadTokenCounter(newProvider);// number of users of same username.
+      setTokenCounter(tokennumber);
+      await loadUserData();
+
       
     } catch (err) {
       console.error("Error in successful connection:", err);
@@ -176,19 +198,28 @@ export default function Dashboard() {
     setUserNFTCount(0);
     setTransactionHash("");
     setError("");
+    setUserNFTData([]);
+    setCurrentUsername("");
+    setLoadingNFTData(false);
   };
 
-  const loadTokenCounter = async (providerInstance?: ethers.BrowserProvider) => {
-    const prov = providerInstance || provider;
-    if (!prov) return;
 
-    try {
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, prov);
-      const counter = await contract.tokenCounter();
-      setTokenCounter(Number(counter));
-    } catch (err) {
-      console.error("Error loading token counter:", err);
-    }
+
+  const loadTokenCounter = async (providerInstance?: ethers.BrowserProvider) => {
+    // const prov = providerInstance ;
+    // if (!prov) {
+    //   console.log("Db not working ");
+    //   return;
+    // }
+
+    // try {
+    //   const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, prov);
+    //   const counter = await contract.tokenCounter();
+    //   setTokenCounter(Number(counter));
+    // } catch (err) {
+    //   console.error("Error loading token counter:", err);
+    // }
+    return 101;
   };
 
   const loadUserData = async () => {
@@ -200,6 +231,63 @@ export default function Dashboard() {
       setUserNFTCount(Number(balance));
     } catch (err) {
       console.error("Error loading user NFT count:", err);
+    }
+  };
+
+  // Function to get username from localStorage (same as registration)
+  const getUsernameFromStorage = (): string => {
+    try {
+      const savedUser = localStorage.getItem('territoryWalkerUser');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed?.username) {
+          console.log("Retrieved username from localStorage:", parsed.username);
+          return parsed.username;
+        }
+      }
+    } catch (error) {
+      console.error("Error retrieving username from localStorage:", error);
+    }
+    
+    console.log("No username found in localStorage, using 'Anonymous'");
+    return "Anonymous";
+  };
+
+  // Function to check if user is properly logged in
+  const isUserLoggedIn = (): boolean => {
+    const username = getUsernameFromStorage();
+    return username !== "Anonymous" && username.trim() !== "";
+  };
+
+  // Function to fetch user's NFT data from backend
+  const fetchUserNFTData = async (username: string) => {
+    if (!username) {
+      console.log("fetchUserNFTData: No username provided");
+      return;
+    }
+    
+    setLoadingNFTData(true);
+    try {
+      const userNFTs = await userNFTAPI.getUserNFTsByUsername(username);
+      setUserNFTData(userNFTs);
+    } catch (err) {
+      console.error("Error fetching user NFT data:", err);
+      setError("Failed to load your NFT data");
+    } finally {
+      setLoadingNFTData(false);
+    }
+  };
+
+  // Function to save NFT hash to database
+  const saveNFTHash = async (username: string, hashcode: string) => {
+    try {
+      await userNFTAPI.createUserNFT(username, hashcode);
+      console.log("Data Saved for Dashboard for user:", username, "Hash:", hashcode);
+      // Refresh the NFT data to show the new entry
+      await fetchUserNFTData(username);
+    } catch (err) {
+      console.error("Error saving NFT hash:", err);
+      setError("Failed to save NFT hash");
     }
   };
 
@@ -314,7 +402,7 @@ export default function Dashboard() {
     try {
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
 
-      // Execute the mintNFT transaction
+      // Execute the mintNFT transaction  
       const transaction = await contract.mintNFT(nft.tokenURI);
       
       setTransactionHash(transaction.hash);
@@ -343,6 +431,67 @@ export default function Dashboard() {
         setError("Insufficient funds for transaction");
       } else {
         setError(err.message || "Failed to mint NFT");
+      }
+    } finally {
+      setClaimingNFT(null);
+    }
+  };
+
+  // Function to mint NFT from user's saved hash
+  const mintNFTFromHash = async (nft: UserNFTData) => {
+    if (connectionStatus !== "connected" || !userAddress || !signer) {
+      setError("Please connect your wallet first!");
+      return;
+    }
+
+    setClaimingNFT(nft.id);
+    setError("");
+    setTransactionHash("");
+
+    try {
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
+
+      // Create tokenURI from the saved hash
+      const tokenURI = `https://fuchsia-secondary-grasshopper-71.mypinata.cloud/ipfs/${nft.hashjson}`;
+      
+      // Execute the mintNFT transaction  
+      const transaction = await contract.mintNFT(tokenURI);
+      
+      setTransactionHash(transaction.hash);
+      
+      // Wait for transaction confirmation
+      const receipt = await transaction.wait();
+      
+      if (receipt.status === 1) {
+        // Transaction successful
+        alert(`Successfully minted NFT from your saved hash! Transaction: ${transaction.hash}`);
+        
+        // Update the NFT as minted in database
+        try {
+          await userNFTAPI.updateUserNFTMintedStatus(nft.id, true);
+          console.log("Updated NFT minted status in database");
+        } catch (updateErr) {
+          console.error("Failed to update minted status:", updateErr);
+        }
+        
+        // Update counters and refresh data
+        await loadTokenCounter();
+        await loadUserData();
+        await fetchUserNFTData(currentUsername);
+        
+      } else {
+        throw new Error("Transaction failed");
+      }
+
+    } catch (err: any) {
+      console.error("Error minting NFT from hash:", err);
+      
+      if (err.code === "ACTION_REJECTED") {
+        setError("Transaction was rejected by user");
+      } else if (err.code === "INSUFFICIENT_FUNDS") {
+        setError("Insufficient funds for transaction");
+      } else {
+        setError(err.message || "Failed to mint NFT from hash");
       }
     } finally {
       setClaimingNFT(null);
@@ -380,11 +529,33 @@ export default function Dashboard() {
             Claim Earth NFT
           </h1>
           <p className="text-gray-600 text-lg">Mint your digital land NFTs on the blockchain</p>
+          
+          {/* Welcome Message with Username */}
+          {connectionStatus === "connected" && currentUsername && currentUsername !== "Anonymous" && (
+            <div className="mt-4 inline-block">
+              <div className="px-6 py-3 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full border border-indigo-200">
+                <p className="text-indigo-800 font-semibold">
+                  Welcome back, <span className="font-mono font-bold text-purple-700">{currentUsername}</span>! 👋
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* Login Prompt if no username */}
+          {connectionStatus === "connected" && (currentUsername === "Anonymous" || !currentUsername) && (
+            <div className="mt-4 inline-block">
+              <div className="px-6 py-3 bg-gradient-to-r from-orange-100 to-red-100 rounded-full border border-orange-200">
+                <p className="text-orange-800 font-semibold">
+                  Please <a href="/" className="underline text-red-700 hover:text-red-900">login or register</a> to see your NFTs
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Left Panel - Stats & Wallet */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="xl:col-span-1 space-y-8">
             {/* Wallet Connection Card */}
             <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 border border-gray-100">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -452,21 +623,45 @@ export default function Dashboard() {
 
               {/* User Address Display */}
               {connectionStatus === "connected" && userAddress && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Connected Address:
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <div className="px-4 py-2 bg-white rounded-lg border border-green-300 font-mono text-sm text-gray-800">
-                      {formatAddress(userAddress)}
+                <div className="mt-6 space-y-4">
+                  {/* Username Display */}
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Your Username:
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <div className="px-4 py-2 bg-white rounded-lg border border-blue-300 font-mono text-sm text-gray-800 font-bold">
+                        {currentUsername || "Generating..."}
+                      </div>
+                      {currentUsername && (
+                        <button
+                          onClick={() => navigator.clipboard.writeText(currentUsername)}
+                          className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                          title="Copy username to clipboard"
+                        >
+                          📋
+                        </button>
+                      )}
                     </div>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(userAddress)}
-                      className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
-                      title="Copy to clipboard"
-                    >
-                      📋
-                    </button>
+                  </div>
+                  
+                  {/* Wallet Address Display */}
+                  <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Connected Address:
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <div className="px-4 py-2 bg-white rounded-lg border border-green-300 font-mono text-sm text-gray-800">
+                        {formatAddress(userAddress)}
+                      </div>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(userAddress)}
+                        className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                        title="Copy to clipboard"
+                      >
+                        📋
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -515,68 +710,206 @@ export default function Dashboard() {
               )}
             </div>
 
+            {/* User Profile Card */}
+            {connectionStatus === "connected" && currentUsername && (
+              <div className="bg-gradient-to-r from-indigo-100 to-purple-100 rounded-3xl shadow-xl p-6 border border-indigo-200 mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <span className="text-2xl">👤</span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-indigo-800">User Profile</h3>
+                      <p className="text-indigo-600 font-mono font-semibold">{currentUsername}</p>
+                      <p className="text-sm text-indigo-500">{formatAddress(userAddress)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-indigo-600">Total NFTs</div>
+                    <div className="text-2xl font-bold text-indigo-800">{userNFTData.length}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl p-6 text-white shadow-xl">
-                <div className="text-sm opacity-90">Total NFTs Minted</div>
+                <div className="text-sm opacity-90">Platform Total</div>
                 <div className="text-3xl font-bold mt-2">{tokenCounter}</div>
-                <div className="text-xs opacity-75 mt-1">On-chain counter</div>
+                <div className="text-xs opacity-75 mt-1">NFTs minted globally</div>
               </div>
               
               <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-xl">
-                <div className="text-sm opacity-90">Your NFTs</div>
+                <div className="text-sm opacity-90">Your Minted NFTs</div>
                 <div className="text-3xl font-bold mt-2">{userNFTCount}</div>
                 <div className="text-xs opacity-75 mt-1">In your wallet</div>
               </div>
               
-              <div className="bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl p-6 text-white shadow-xl">
-                <div className="text-sm opacity-90">Status</div>
-                <div className="text-xl font-bold mt-2 capitalize">{connectionStatus}</div>
-                <div className="text-xs opacity-75 mt-1">Wallet connection</div>
+              <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl p-6 text-white shadow-xl">
+                <div className="text-sm opacity-90">Ready to Mint</div>
+                <div className="text-3xl font-bold mt-2">{userNFTData.filter(nft => nft.minted === 0).length}</div>
+                <div className="text-xs opacity-75 mt-1">
+                  {currentUsername && currentUsername !== "Anonymous" ? `Unminted NFTs for ${currentUsername}` : "Login to see yours"}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Right Panel - NFT Claims */}
-          <div className="lg:col-span-1">
+          {/* Middle Panel - Stats Summary */}
+          <div className="xl:col-span-1">
+            <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl shadow-xl p-6 border border-gray-200 h-full">
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Quick Stats</h2>
+              <p className="text-gray-600 mb-6">Your NFT overview</p>
+              
+              <div className="space-y-4">
+                <div className="bg-white rounded-xl p-4 shadow-md">
+                  <div className="text-lg font-bold text-blue-600">{userNFTData.length}</div>
+                  <div className="text-sm text-gray-600">Total Hash Codes</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {userNFTData.filter(nft => nft.minted === 1).length} minted, {userNFTData.filter(nft => nft.minted === 0).length} pending
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-xl p-4 shadow-md">
+                  <div className="text-lg font-bold text-green-600">{userNFTCount}</div>
+                  <div className="text-sm text-gray-600">Minted NFTs</div>
+                </div>
+                
+                <div className="bg-white rounded-xl p-4 shadow-md">
+                  <div className="text-lg font-bold text-purple-600">{tokenCounter}</div>
+                  <div className="text-sm text-gray-600">Total Platform NFTs</div>
+                </div>
+
+                {connectionStatus === "connected" && isUserLoggedIn() && (
+                  <div className="bg-white rounded-xl p-4 shadow-md">
+                    <div className="text-sm text-gray-700 mb-2">Username:</div>
+                    <div className="font-mono font-bold text-indigo-600">{currentUsername}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel - Available NFTs to Mint */}
+          <div className="xl:col-span-1">
             <div className="bg-gradient-to-br from-purple-100 to-pink-100 rounded-3xl shadow-xl p-6 md:p-8 border border-purple-200 h-full">
               <h2 className="text-2xl font-bold text-purple-800 mb-2">Available Land NFTs</h2>
-              <p className="text-purple-600 mb-6">Mint your digital territories on blockchain</p>
+              <p className="text-purple-600 mb-4">Mint your digital territories on blockchain</p>
               
-              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                {mockNFTs.map((nft, idx) => (
-                  <div 
-                    key={idx} 
-                    className="bg-white rounded-2xl shadow-lg p-4 hover:shadow-xl transition-all duration-200 border border-purple-100"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-800">{nft.area}</div>
-                        <div className="text-xs text-gray-500 font-mono mt-1">ID: {nft.hash}</div>
-                      </div>
-                      <button 
-                        onClick={() => mintNFT(nft)}
-                        disabled={connectionStatus !== "connected" || claimingNFT === nft.area}
-                        className={`px-4 py-2 rounded-xl font-bold text-white shadow-lg transition-all duration-200 min-w-20 ${
-                          connectionStatus === "connected" && claimingNFT !== nft.area
-                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105' 
-                            : 'bg-gray-400 cursor-not-allowed'
-                        }`}
+              {connectionStatus !== "connected" ? (
+                <div className="text-center py-8">
+                  <p className="text-purple-600">Connect wallet to mint NFTs</p>
+                </div>
+              ) : !isUserLoggedIn() ? (
+                <div className="text-center py-8">
+                  <p className="text-purple-600 mb-2">Please login first</p>
+                  <p className="text-sm text-purple-500">
+                    <a href="/" className="underline hover:text-purple-700">Go to login page</a> to register/login
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Control buttons */}
+                  <div className="flex items-center justify-between text-sm text-purple-700 mb-4">
+                    <div>Username: <span className="font-mono font-bold">{currentUsername}</span></div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => saveNFTHash(currentUsername, `test_hash_${Date.now()}`)}
+                        disabled={loadingNFTData}
+                        className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors disabled:opacity-50"
+                        title="Add test NFT"
                       >
-                        {claimingNFT === nft.area ? (
-                          <div className="flex items-center gap-1">
-                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          </div>
-                        ) : connectionStatus === "connected" ? (
-                          'Mint'
-                        ) : (
-                          'Connect'
-                        )}
+                        ➕ Test
+                      </button>
+                      <button
+                        onClick={() => fetchUserNFTData(currentUsername)}
+                        disabled={loadingNFTData}
+                        className="px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded transition-colors disabled:opacity-50"
+                        title="Refresh NFT data"
+                      >
+                        🔄
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                    {loadingNFTData ? (
+                      <div className="text-center py-8">
+                        <div className="w-8 h-8 border-4 border-purple-300 border-t-purple-600 rounded-full animate-spin mx-auto"></div>
+                        <p className="text-purple-600 mt-2">Loading your NFTs...</p>
+                      </div>
+                    ) : userNFTData.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-purple-600 mb-2">No NFTs available</p>
+                        <p className="text-sm text-purple-500">Create polygons in MapView to generate NFTs!</p>
+                      </div>
+                    ) : (
+                      userNFTData.map((nft, idx) => (
+                        <div 
+                          key={nft.id} 
+                          className="bg-white rounded-2xl shadow-lg p-4 hover:shadow-xl transition-all duration-200 border border-purple-100"
+                        >
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold text-gray-800">Land NFT #{idx + 1}</div>
+                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                  nft.minted === 1 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {nft.minted === 1 ? 'Minted' : 'Pending'}
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-500 font-mono mt-1 break-all">
+                                Hash: {nft.hashjson.length > 20 ? `${nft.hashjson.substring(0, 20)}...` : nft.hashjson}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">
+                                Created: {new Date(nft.createdAt).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              {nft.minted === 0 ? (
+                                <button 
+                                  onClick={() => mintNFTFromHash(nft)}
+                                  disabled={connectionStatus !== "connected" || claimingNFT === nft.id}
+                                  className={`px-4 py-2 rounded-xl font-bold text-white shadow-lg transition-all duration-200 min-w-20 ${
+                                    connectionStatus === "connected" && claimingNFT !== nft.id
+                                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105' 
+                                      : 'bg-gray-400 cursor-not-allowed'
+                                  }`}
+                                >
+                                  {claimingNFT === nft.id ? (
+                                    <div className="flex items-center gap-1">
+                                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    </div>
+                                  ) : connectionStatus === "connected" ? (
+                                    'Mint'
+                                  ) : (
+                                    'Connect'
+                                  )}
+                                </button>
+                              ) : (
+                                <div className="px-4 py-2 rounded-xl font-bold text-white bg-green-500 min-w-20 text-center">
+                                  ✅ Minted
+                                </div>
+                              )}
+                              <button
+                                onClick={() => navigator.clipboard.writeText(nft.hashjson)}
+                                className="px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded transition-colors"
+                                title="Copy hash code"
+                              >
+                                📋 Copy
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

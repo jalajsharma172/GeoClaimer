@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertClaimSchema, insertCompletedCircleSchema, insertUserPathSchema, insertMapViewPreferencesSchema } from "@shared/schema";
+import { insertUserSchema, insertClaimSchema, insertCompletedCircleSchema, insertUserPathSchema, insertMapViewPreferencesSchema, insertUserNFTSchema, insertLeaderTableSchema } from "@shared/schema";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -33,6 +33,118 @@ const userPathSchema = insertUserPathSchema.extend({
   city: data.city || undefined,
   country: data.country || undefined,
 }));
+
+// Helper functions for data processing
+function filterMetadata(jsonData: any): any {
+  // Extract relevant metadata fields
+  // You can customize this based on your data structure
+  const metadata: any = {};
+  
+  // Common metadata fields that might be relevant
+  const relevantFields = [
+    'username', 'user', 'name', 'id', 'userId',
+    'timestamp', 'createdAt', 'updatedAt', 'date', 'time',
+    'score', 'points', 'level', 'rank', 'position',
+    'area', 'location', 'coordinates', 'lat', 'lng', 'latitude', 'longitude',
+    'type', 'category', 'status', 'state',
+    'metadata', 'data', 'info', 'details',
+    'nft', 'token', 'hash', 'contract', 'blockchain',
+    'game', 'achievement', 'progress', 'stats'
+  ];
+  
+  // Extract fields that exist in the data
+  for (const field of relevantFields) {
+    if (jsonData.hasOwnProperty(field) && jsonData[field] !== null && jsonData[field] !== undefined) {
+      metadata[field] = jsonData[field];
+    }
+  }
+  
+  // Also check nested objects
+  if (jsonData.metadata && typeof jsonData.metadata === 'object') {
+    metadata.nestedMetadata = jsonData.metadata;
+  }
+  
+  if (jsonData.data && typeof jsonData.data === 'object') {
+    metadata.nestedData = jsonData.data;
+  }
+  
+  // Add processing timestamp
+  metadata.processedAt = new Date().toISOString();
+  
+  return metadata;
+}
+
+function extractUsername(jsonData: any): string {
+  // Try to extract username from various possible fields
+  const possibleUsernameFields = [
+    'username', 'user', 'userName', 'user_name',
+    'name', 'displayName', 'display_name',
+    'id', 'userId', 'user_id', 'playerId', 'player_id',
+    'email', 'account', 'accountName'
+  ];
+  
+  for (const field of possibleUsernameFields) {
+    if (jsonData[field] && typeof jsonData[field] === 'string') {
+      return jsonData[field];
+    }
+  }
+  
+  // Check nested objects
+  if (jsonData.user && typeof jsonData.user === 'object') {
+    for (const field of possibleUsernameFields) {
+      if (jsonData.user[field] && typeof jsonData.user[field] === 'string') {
+        return jsonData.user[field];
+      }
+    }
+  }
+  
+  if (jsonData.metadata && typeof jsonData.metadata === 'object') {
+    for (const field of possibleUsernameFields) {
+      if (jsonData.metadata[field] && typeof jsonData.metadata[field] === 'string') {
+        return jsonData.metadata[field];
+      }
+    }
+  }
+  
+  // Fallback to 'anonymous' if no username found
+  return 'anonymous_' + Date.now();
+}
+
+function calculateScore(metadata: any): number {
+  // Calculate score based on metadata
+  // You can customize this logic based on your requirements
+  let score = 0;
+  
+  // Basic scoring logic
+  if (metadata.score && typeof metadata.score === 'number') {
+    score += metadata.score;
+  }
+  
+  if (metadata.points && typeof metadata.points === 'number') {
+    score += metadata.points;
+  }
+  
+  if (metadata.level && typeof metadata.level === 'number') {
+    score += metadata.level * 10;
+  }
+  
+  if (metadata.area && typeof metadata.area === 'number') {
+    score += Math.floor(metadata.area / 100); // 1 point per 100 area units
+  }
+  
+  // Bonus points for having complete data
+  const dataCompletenessBonuses = [
+    'username', 'location', 'timestamp', 'coordinates'
+  ];
+  
+  for (const field of dataCompletenessBonuses) {
+    if (metadata[field]) {
+      score += 5;
+    }
+  }
+  
+  return Math.max(0, score); // Ensure score is not negative
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication endpoints
@@ -283,6 +395,201 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ preferences });
     } catch (error) {
       res.status(500).json({ message: "Failed to update map preferences" });
+    }
+  });
+
+  // UserNFT endpoints
+  app.get("/api/user-nfts", async (req, res) => {
+    try {
+      const userNFTs = await storage.getAllUserNFTs();
+      res.json({ userNFTs });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user NFTs" });
+    }
+  });
+
+  app.get("/api/user-nfts/:id", async (req, res) => {
+    try {
+      const userNFT = await storage.getUserNFT(req.params.id);
+      if (!userNFT) {
+        return res.status(404).json({ message: "User NFT not found" });
+      }
+      res.json({ userNFT });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user NFT" });
+    }
+  });
+
+  app.get("/api/user-nfts/username/:username", async (req, res) => {
+    try {
+      console.log("Getting UserNFTs for username:", req.params.username);
+      const userNFTs = await storage.getUserNFTsByUsername(req.params.username);
+      console.log("Found UserNFTs:", userNFTs.length, "records");
+      res.json({ userNFTs });
+    } catch (error) {
+      console.error("Error getting UserNFTs by username:", error);
+      res.status(500).json({ message: "Failed to get user NFTs by username" });
+    }
+  });
+
+  app.post("/api/user-nfts", async (req, res) => {
+    try {
+      const userNFTData = insertUserNFTSchema.parse(req.body);
+      const userNFT = await storage.createUserNFT(userNFTData);
+      res.json({ userNFT });
+    } catch (error) {
+      console.error("UserNFT creation error:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        res.status(400).json({ message: "Invalid user NFT data" });
+      }
+    }
+  });
+
+  app.put("/api/user-nfts/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      const userNFT = await storage.updateUserNFT(req.params.id, updates);
+      if (!userNFT) {
+        return res.status(404).json({ message: "UserNFT not found" });
+      }
+      res.json({ userNFT });
+    } catch (error) {
+      console.error("UserNFT update error:", error);
+      res.status(500).json({ message: "Failed to update UserNFT" });
+    }
+  });
+
+  // LeaderTable endpoints
+  app.get("/api/leaderboard", async (req, res) => {
+    try {
+      const entries = await storage.getAllLeaderTableEntries();
+      res.json({ leaderboard: entries });
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
+      res.status(500).json({ message: "Failed to get leaderboard" });
+    }
+  });
+
+
+
+
+
+
+
+
+
+
+  
+
+  app.get("/api/leaderboard/user/:username", async (req, res) => {
+    try {
+      const entries = await storage.getLeaderTableByUsername(req.params.username);
+      res.json({ entries });
+    } catch (error) {
+      console.error("Error fetching user leaderboard entries:", error);
+      res.status(500).json({ message: "Failed to get user leaderboard entries" });
+    }
+  });
+
+  // Test endpoint to generate sample data for testing
+  app.get("/api/test-data", async (req, res) => {
+    try {
+      const sampleData = {
+        username: "testUser_" + Date.now(),
+        score: Math.floor(Math.random() * 1000),
+        level: Math.floor(Math.random() * 50),
+        area: Math.floor(Math.random() * 10000),
+        location: {
+          lat: 40.7128 + (Math.random() - 0.5) * 0.1,
+          lng: -74.0060 + (Math.random() - 0.5) * 0.1
+        },
+        timestamp: new Date().toISOString(),
+        type: "game_completion",
+        metadata: {
+          gameMode: "survival",
+          difficulty: "hard",
+          achievements: ["explorer", "builder"]
+        }
+      };
+      
+      res.json({
+        message: "Sample data for testing",
+        sampleData,
+        instruction: "POST this data to /api/submit-data to test the API"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate test data" });
+    }
+  });
+
+  // Main POST API endpoint to accept JSON data and filter metadata
+  app.post("/api/submit-data", async (req, res) => {
+    try {
+      console.log("Received JSON data:", JSON.stringify(req.body, null, 2));
+      
+      const jsonData = req.body;
+      
+      // Validate that we have some data
+      if (!jsonData || typeof jsonData !== 'object') {
+        return res.status(400).json({ 
+          message: "Invalid JSON data", 
+          error: "Request body must be a valid JSON object" 
+        });
+      }
+
+      // Filter and extract metadata
+      const metadata = filterMetadata(jsonData);
+      
+      // Extract username (you can modify this logic based on your data structure)
+      const username = extractUsername(jsonData);
+      
+      // Calculate score (optional, based on your business logic)
+      const score = calculateScore(metadata);
+
+      // Create LeaderTable entry
+      const leaderEntry = {
+        username: username,
+        metadata: JSON.stringify(metadata),
+        score: score,
+        rank: 0 // Will be calculated later if needed
+      };
+
+      console.log("Filtered metadata:", metadata);
+      console.log("Extracted username:", username);
+      console.log("Calculated score:", score);
+
+      // Validate the entry before saving
+      const validatedEntry = insertLeaderTableSchema.parse(leaderEntry);
+      
+      // Save to database
+      const savedEntry = await storage.createLeaderTableEntry(validatedEntry);
+      
+      console.log("Data saved to LeaderTable:", savedEntry.id);
+
+      res.json({ 
+        message: "Data processed and saved successfully",
+        entryId: savedEntry.id,
+        username: username,
+        score: score,
+        metadata: metadata
+      });
+
+    } catch (error) {
+      console.error("Submit data error:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to process and save data",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

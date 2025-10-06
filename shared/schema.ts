@@ -76,6 +76,24 @@ export const mapViewPreferences = pgTable("map_view_preferences", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const userNFTs = pgTable("UserNFT", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull(),
+  hashjson: text("hashjson").notNull(), // JSON string containing hash code data
+  minted: integer("minted").default(0).notNull(), // 0 = false (not minted), 1 = true (minted)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const leaderTable = pgTable("LeaderTable", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull(),
+  metadata: text("metadata").notNull(), // JSON string containing filtered metadata
+  score: real("score").default(0), // Optional score field for leaderboard
+  rank: integer("rank").default(0), // Optional rank field
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -106,6 +124,17 @@ export const insertMapViewPreferencesSchema = createInsertSchema(mapViewPreferen
   updatedAt: true,
 });
 
+export const insertUserNFTSchema = createInsertSchema(userNFTs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLeaderTableSchema = createInsertSchema(leaderTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertClaim = z.infer<typeof insertClaimSchema>;
@@ -116,3 +145,7 @@ export type InsertCompletedCircle = z.infer<typeof insertCompletedCircleSchema>;
 export type CompletedCircle = typeof completedCircles.$inferSelect;
 export type InsertMapViewPreferences = z.infer<typeof insertMapViewPreferencesSchema>;
 export type MapViewPreferences = typeof mapViewPreferences.$inferSelect;
+export type InsertUserNFT = z.infer<typeof insertUserNFTSchema>;
+export type UserNFT = typeof userNFTs.$inferSelect;
+export type InsertLeaderTable = z.infer<typeof insertLeaderTableSchema>;
+export type LeaderTable = typeof leaderTable.$inferSelect;

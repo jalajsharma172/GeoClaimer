@@ -9,6 +9,7 @@ import { uploadJsonToIPFS } from './UploadToIPFS';
 import { calculatePolygonArea } from "@shared/utils/geometry";
 import { useNavigate } from "react-router-dom"; // Add this import
 import { createClient } from "@supabase/supabase-js";
+import { userNFTAPI } from "../App"; // Import userNFT API functions
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY ;
 
@@ -186,6 +187,8 @@ function MapView() {
           if (parsed?.username) userName = parsed.username;
         }
       } catch {}
+      
+      console.log("Using username for MapView:", userName);
 
       const metadata = {
         UserName: userName,
@@ -211,22 +214,17 @@ function MapView() {
         console.error('Failed to upload metadata to IPFS', e);
       }
 
-      // For Dashboard    
+      // For Dashboard - Save using userNFTAPI  
       //userName-> DB
       //hashcode-> DB
-       
-      const { data, error: insertError } = await supabase
-          .from('UserNFT')
-          .insert(
-            { username: userName, hashjson: hashcode }
-          )
-          .select();
-    if (insertError) {
-        console.error("Error fetching leaderboard:", insertError.message);
-    } else {
-        console.log(data);
-        console.log("Data Saved for Dashboard for user : " + userName + " Hash : " + hashcode);
-    }
+      try {
+        await userNFTAPI.createUserNFT(userName, hashcode);
+        console.log("Data Saved for Dashboard for user:", userName, "Hash:", hashcode);
+        toast.success(`NFT data saved successfully for ${userName}!`);
+      } catch (error) {
+        console.error("Error saving NFT data:", error);
+        toast.error("Failed to save NFT data to database");
+      }
   }
 
   // --- CHANGE #3: Create a formatted distance string for display ---

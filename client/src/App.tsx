@@ -12,6 +12,92 @@ import MapView from "@/components/MapView";
 import Leaderboard from "./components/Leaderboard";
 import Dashboard from "./components/Dashboard";
 
+// UserNFT interface
+interface UserNFTData {
+  id: string;
+  username: string;
+  hashjson: string;
+  minted: number; // 0 = false (not minted), 1 = true (minted)
+  createdAt: string;
+}
+
+// UserNFT API functions
+const userNFTAPI = {
+  // Get user NFTs by username
+  async getUserNFTsByUsername(username: string): Promise<UserNFTData[]> {
+    try {
+      console.log("Fetching NFT data for username:", username);
+      const response = await fetch(`/api/user-nfts/username/${encodeURIComponent(username)}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error response:", errorText);
+        throw new Error(`Failed to fetch user NFT data: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("API Response data:", data);
+      return data.userNFTs || [];
+    } catch (error) {
+      console.error("Error fetching user NFT data:", error);
+      throw error;
+    }
+  },
+
+  // Create new user NFT
+  async createUserNFT(username: string, hashjson: string): Promise<UserNFTData> {
+    try {
+      console.log("Creating NFT data for username:", username, "with hash:", hashjson);
+      const response = await fetch('/api/user-nfts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, hashjson })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error response:", errorText);
+        throw new Error(`Failed to create user NFT: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Created NFT:", data);
+      return data.userNFT;
+    } catch (error) {
+      console.error("Error creating user NFT:", error);
+      throw error;
+    }
+  },
+
+  // Update NFT minted status
+  async updateUserNFTMintedStatus(nftId: string, minted: boolean): Promise<UserNFTData> {
+    try {
+      console.log("Updating NFT minted status:", nftId, "to:", minted);
+      const response = await fetch(`/api/user-nfts/${nftId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minted: minted ? 1 : 0 })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error response:", errorText);
+        throw new Error(`Failed to update NFT minted status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Updated NFT:", data);
+      return data.userNFT;
+    } catch (error) {
+      console.error("Error updating NFT minted status:", error);
+      throw error;
+    }
+  }
+};
+
+// Export userNFTAPI for use in components
+export { userNFTAPI };
+
 function Router() {
   const [user, setUser] = useState<User | null>(null);// User Name
   const [isLoading, setIsLoading] = useState(true);   // IsLoading Status

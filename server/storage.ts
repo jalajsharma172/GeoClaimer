@@ -1,6 +1,6 @@
-import { type User, type InsertUser, type Claim, type InsertClaim, type CompletedCircle, type InsertCompletedCircle, type UserPath, type InsertUserPath, type MapViewPreferences, type InsertMapViewPreferences } from "@shared/schema";
+import { type User, type InsertUser, type Claim, type InsertClaim, type CompletedCircle, type InsertCompletedCircle, type UserPath, type InsertUserPath, type MapViewPreferences, type InsertMapViewPreferences, type UserNFT, type InsertUserNFT, type LeaderTable, type InsertLeaderTable } from "@shared/schema";
 // Database storage implementation using Drizzle ORM
-import { users, claims, completedCircles, userPaths, mapViewPreferences } from "@shared/schema";
+import { users, claims, completedCircles, userPaths, mapViewPreferences, userNFTs, leaderTable } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
@@ -39,6 +39,20 @@ export interface IStorage {
   getMapViewPreferences(userId: string): Promise<MapViewPreferences | undefined>;
   createMapViewPreferences(preferences: InsertMapViewPreferences): Promise<MapViewPreferences>;
   updateMapViewPreferences(userId: string, updates: Partial<MapViewPreferences>): Promise<MapViewPreferences | undefined>;
+  
+  // UserNFT operations
+  getUserNFT(id: string): Promise<UserNFT | undefined>;
+  getUserNFTsByUsername(username: string): Promise<UserNFT[]>;
+  getAllUserNFTs(): Promise<UserNFT[]>;
+  createUserNFT(userNFT: InsertUserNFT): Promise<UserNFT>;
+  updateUserNFT(id: string, updates: Partial<UserNFT>): Promise<UserNFT | undefined>;
+  
+  // LeaderTable operations
+  getLeaderTableEntry(id: string): Promise<LeaderTable | undefined>;
+  getLeaderTableByUsername(username: string): Promise<LeaderTable[]>;
+  getAllLeaderTableEntries(): Promise<LeaderTable[]>;
+  createLeaderTableEntry(entry: InsertLeaderTable): Promise<LeaderTable>;
+  updateLeaderTableEntry(id: string, updates: Partial<LeaderTable>): Promise<LeaderTable | undefined>;
 }
 
 // MapView preferences operations added to interface and implemented below
@@ -240,6 +254,85 @@ export class DatabaseStorage implements IStorage {
       .where(eq(mapViewPreferences.userId, userId))
       .returning();
     return preferences || undefined;
+  }
+
+  async getUserNFT(id: string): Promise<UserNFT | undefined> {
+    const [userNFT] = await db.select().from(userNFTs).where(eq(userNFTs.id, id));
+    return userNFT || undefined;
+  }
+
+  async getUserNFTsByUsername(username: string): Promise<UserNFT[]> {
+    try {
+      // Try with created_at ordering first
+      return await db.select().from(userNFTs).where(eq(userNFTs.username, username)).orderBy(desc(userNFTs.createdAt));
+    } catch (error) {
+      // If created_at column doesn't exist, fetch without ordering
+      console.log("created_at column not found, fetching without ordering");
+      return await db.select().from(userNFTs).where(eq(userNFTs.username, username));
+    }
+  }
+
+  async getAllUserNFTs(): Promise<UserNFT[]> {
+    try {
+      // Try with created_at ordering first
+      return await db.select().from(userNFTs).orderBy(desc(userNFTs.createdAt));
+    } catch (error) {
+      // If created_at column doesn't exist, fetch without ordering
+      console.log("created_at column not found, fetching without ordering");
+      return await db.select().from(userNFTs);
+    }
+  }
+
+  async createUserNFT(insertUserNFT: InsertUserNFT): Promise<UserNFT> {
+    const [userNFT] = await db.insert(userNFTs).values(insertUserNFT).returning();
+    return userNFT;
+  }
+
+  async updateUserNFT(id: string, updates: Partial<UserNFT>): Promise<UserNFT | undefined> {
+    const [userNFT] = await db
+      .update(userNFTs)
+      .set(updates)
+      .where(eq(userNFTs.id, id))
+      .returning();
+    return userNFT || undefined;
+  }
+
+  // LeaderTable operations implementation
+  async getLeaderTableEntry(id: string): Promise<LeaderTable | undefined> {
+    const [entry] = await db.select().from(leaderTable).where(eq(leaderTable.id, id));
+    return entry || undefined;
+  }
+
+  async getLeaderTableByUsername(username: string): Promise<LeaderTable[]> {
+    try {
+      return await db.select().from(leaderTable).where(eq(leaderTable.username, username)).orderBy(desc(leaderTable.createdAt));
+    } catch (error) {
+      console.log("Error fetching leader table entries, fetching without ordering");
+      return await db.select().from(leaderTable).where(eq(leaderTable.username, username));
+    }
+  }
+
+  async getAllLeaderTableEntries(): Promise<LeaderTable[]> {
+    try {
+      return await db.select().from(leaderTable).orderBy(desc(leaderTable.rank), desc(leaderTable.createdAt));
+    } catch (error) {
+      console.log("Error fetching leader table entries, fetching without ordering");
+      return await db.select().from(leaderTable);
+    }
+  }
+
+  async createLeaderTableEntry(insertEntry: InsertLeaderTable): Promise<LeaderTable> {
+    const [entry] = await db.insert(leaderTable).values(insertEntry).returning();
+    return entry;
+  }
+
+  async updateLeaderTableEntry(id: string, updates: Partial<LeaderTable>): Promise<LeaderTable | undefined> {
+    const [entry] = await db
+      .update(leaderTable)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(leaderTable.id, id))
+      .returning();
+    return entry || undefined;
   }
 }
 
